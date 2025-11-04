@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { Link } from 'react-router-dom';
-import { LogOut, Plus, RefreshCw } from 'lucide-react';
+import { LogOut, Plus, RefreshCw, X } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
 import { useOrderPolling } from '../hooks/useOrderPolling';
 import { api } from '../lib/api';
@@ -12,6 +12,8 @@ export function Dashboard() {
   const [loading, setLoading] = useState(true);
   const [syncLoading, setSyncLoading] = useState(false);
   const [filter, setFilter] = useState<'todos' | 'hoje' | 'futuro'>('hoje');
+  const [statusFilter, setStatusFilter] = useState<string[]>(['Aguardando', 'Em Produção', 'Agendado', 'Saiu para Entrega', 'Esperando Retirada']);
+  const [selectedPedido, setSelectedPedido] = useState<Pedido | null>(null);
 
   const loadPedidos = useCallback(async () => {
     try {
@@ -47,11 +49,23 @@ export function Dashboard() {
 
   const hoje = new Date().toISOString().split('T')[0];
   
-  const pedidosFiltrados = pedidos.filter(p => {
-    if (filter === 'hoje') return p.data_agendamento === hoje;
-    if (filter === 'futuro') return p.data_agendamento > hoje;
-    return true;
-  });
+  const pedidosFiltrados = pedidos
+    .filter(p => {
+      if (filter === 'hoje') return p.data_agendamento === hoje;
+      if (filter === 'futuro') return p.data_agendamento > hoje;
+      return true;
+    })
+    .filter(p => statusFilter.includes(p.status));
+
+  const todosStatus = ['Aguardando', 'Em Produção', 'Agendado', 'Saiu para Entrega', 'Esperando Retirada', 'Finalizado'];
+  
+  const toggleStatus = (status: string) => {
+    setStatusFilter(prev => 
+      prev.includes(status) 
+        ? prev.filter(s => s !== status)
+        : [...prev, status]
+    );
+  };
 
   const statusColors: Record<string, string> = {
     "Em Produção": "bg-yellow-500",
@@ -92,7 +106,7 @@ export function Dashboard() {
       {/* Main Content */}
       <main className="max-w-7xl mx-auto px-6 py-8">
         {/* Ações */}
-        <div className="flex items-center justify-between mb-6">
+        <div className="flex items-center justify-between mb-4">
           <div className="flex gap-2">
             <button
               onClick={() => setFilter('todos')}
@@ -144,6 +158,29 @@ export function Dashboard() {
               Novo Pedido
             </Link>
           </div>
+        </div>
+
+        {/* Filtros de Status */}
+        <div className="mb-6 bg-zinc-900 border border-zinc-800 rounded-lg p-4">
+          <h3 className="text-sm font-medium text-zinc-400 mb-3">Filtrar por Status:</h3>
+          <div className="flex flex-wrap gap-2">
+            {todosStatus.map((status) => (
+              <button
+                key={status}
+                onClick={() => toggleStatus(status)}
+                className={`px-3 py-1.5 rounded-lg text-sm transition ${
+                  statusFilter.includes(status)
+                    ? `${statusColors[status] || 'bg-gray-600'} text-white`
+                    : 'bg-zinc-800 text-zinc-400 hover:bg-zinc-700'
+                }`}
+              >
+                {status}
+              </button>
+            ))}
+          </div>
+          <p className="text-xs text-zinc-500 mt-2">
+            {statusFilter.length === 0 ? 'Nenhum status selecionado' : `${statusFilter.length} status selecionado(s)`}
+          </p>
         </div>
 
         {/* Lista de Pedidos */}
@@ -201,11 +238,115 @@ export function Dashboard() {
                   </div>
                 )}
 
-                <button className="w-full px-3 py-2 bg-zinc-800 hover:bg-zinc-700 text-white rounded-lg text-sm transition">
+                <button 
+                  onClick={() => setSelectedPedido(pedido)}
+                  className="w-full px-3 py-2 bg-zinc-800 hover:bg-zinc-700 text-white rounded-lg text-sm transition"
+                >
                   Ver Detalhes
                 </button>
               </div>
             ))}
+          </div>
+        )}
+
+        {/* Modal de Detalhes */}
+        {selectedPedido && (
+          <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+            <div className="bg-zinc-900 border border-zinc-800 rounded-xl w-[90%] max-w-4xl max-h-[90vh] overflow-y-auto">
+              {/* Header do Modal */}
+              <div className="sticky top-0 bg-zinc-900 border-b border-zinc-800 p-6 flex items-center justify-between">
+                <div>
+                  <h2 className="text-2xl font-bold text-white">Pedido #{selectedPedido.numero_pedido}</h2>
+                  <p className="text-zinc-400">{selectedPedido.nome_cliente}</p>
+                </div>
+                <button
+                  onClick={() => setSelectedPedido(null)}
+                  className="text-zinc-400 hover:text-white transition"
+                >
+                  <X size={24} />
+                </button>
+              </div>
+
+              {/* Conteúdo do Modal */}
+              <div className="p-6 space-y-6">
+                {/* Informações Gerais */}
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <p className="text-sm text-zinc-500">Status</p>
+                    <span className={`inline-block mt-1 ${statusColors[selectedPedido.status] || 'bg-gray-600'} text-white text-sm px-3 py-1 rounded`}>
+                      {selectedPedido.status}
+                    </span>
+                  </div>
+                  <div>
+                    <p className="text-sm text-zinc-500">Tipo de Entrega</p>
+                    <p className="text-white font-medium">{selectedPedido.tipo_entrega}</p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-zinc-500">Data Agendada</p>
+                    <p className="text-white font-medium">{new Date(selectedPedido.data_agendamento).toLocaleDateString('pt-BR')}</p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-zinc-500">Horário</p>
+                    <p className="text-white font-medium">{selectedPedido.horario_agendamento}</p>
+                  </div>
+                  {selectedPedido.telefone_cliente && (
+                    <div>
+                      <p className="text-sm text-zinc-500">Telefone</p>
+                      <p className="text-white font-medium">{selectedPedido.telefone_cliente}</p>
+                    </div>
+                  )}
+                  <div>
+                    <p className="text-sm text-zinc-500">Valor Total</p>
+                    <p className="text-white font-medium text-lg">R$ {Number(selectedPedido.valor_total || 0).toFixed(2)}</p>
+                  </div>
+                </div>
+
+                {/* Endereço de Entrega */}
+                {selectedPedido.endereco_entrega && (
+                  <div>
+                    <p className="text-sm text-zinc-500 mb-1">Endereço de Entrega</p>
+                    <p className="text-white bg-zinc-800 p-3 rounded-lg">{selectedPedido.endereco_entrega}</p>
+                  </div>
+                )}
+
+                {/* Observações */}
+                {selectedPedido.observacoes && (
+                  <div>
+                    <p className="text-sm text-zinc-500 mb-1">Observações</p>
+                    <p className="text-white bg-zinc-800 p-3 rounded-lg">{selectedPedido.observacoes}</p>
+                  </div>
+                )}
+
+                {/* Itens do Pedido */}
+                <div>
+                  <h3 className="text-lg font-semibold text-white mb-3">Itens do Pedido</h3>
+                  <div className="grid grid-cols-2 gap-4">
+                    {selectedPedido.itens && selectedPedido.itens.length > 0 ? (
+                      selectedPedido.itens.map((item, idx) => (
+                        <div key={idx} className="flex items-center gap-4 bg-zinc-800 rounded-xl p-4 border border-zinc-700">
+                          <img
+                            src={item.imagem || 'https://placehold.co/200x200?text=Sem+Imagem'}
+                            alt={item.nome}
+                            className="w-24 h-24 object-cover rounded-xl shrink-0"
+                          />
+                          <div className="flex-1">
+                            <h3 className="text-white font-medium mb-1">{item.nome}</h3>
+                            <p className="text-zinc-400 text-sm">Quantidade: {item.quantidade}</p>
+                            {item.observacoes && (
+                              <p className="text-zinc-500 text-xs mt-2">{item.observacoes}</p>
+                            )}
+                          </div>
+                        </div>
+                      ))
+                    ) : (
+                      <div className="col-span-2 text-center text-zinc-500 py-8">
+                        Nenhum item cadastrado neste pedido
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+            </div>
           </div>
         )}
       </main>
