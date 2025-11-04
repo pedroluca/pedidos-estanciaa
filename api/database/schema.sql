@@ -1,8 +1,4 @@
 -- Schema do banco de dados MySQL para o sistema de pedidos da Floricultura Estância-A
-
-CREATE DATABASE IF NOT EXISTS pedidos_estanciaa CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
-USE pedidos_estanciaa;
-
 -- Tabela de usuários
 CREATE TABLE IF NOT EXISTS usuarios (
   id INT AUTO_INCREMENT PRIMARY KEY,

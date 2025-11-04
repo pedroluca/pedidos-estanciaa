@@ -37,9 +37,6 @@ spl_autoload_register(function ($class) {
     }
 });
 
-// Inicializa o banco de dados
-Database::getInstance()->initDatabase();
-
 // Roteamento simples
 $requestUri = $_SERVER['REQUEST_URI'];
 $requestMethod = $_SERVER['REQUEST_METHOD'];
