@@ -213,7 +213,7 @@ export function Dashboard() {
                 </div>
 
                 <div className="text-sm text-zinc-400 space-y-1 mb-3">
-                  <p>📅 {new Date(pedido.data_agendamento).toLocaleDateString('pt-BR')}</p>
+                  <p>📅 {pedido.data_agendamento.split('-').reverse().join('/')}</p>
                   <p>🕐 {pedido.horario_agendamento}</p>
                   <p>📦 {pedido.itens?.length || 0} item(s)</p>
                   <p>💰 R$ {Number(pedido.valor_total || 0).toFixed(2)}</p>
@@ -283,7 +283,7 @@ export function Dashboard() {
                   </div>
                   <div>
                     <p className="text-sm text-zinc-500">Data Agendada</p>
-                    <p className="text-white font-medium">{new Date(selectedPedido.data_agendamento).toLocaleDateString('pt-BR')}</p>
+                    <p className="text-white font-medium">{selectedPedido.data_agendamento.split('-').reverse().join('/')}</p>
                   </div>
                   <div>
                     <p className="text-sm text-zinc-500">Horário</p>
