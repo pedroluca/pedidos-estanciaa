@@ -75,6 +75,18 @@ if ($uri === '/pedidos/poll' && $requestMethod === 'POST') {
     $controller->pollOrders();
 }
 
+// Rota de debug da API
+if ($uri === '/debug/api' && $requestMethod === 'GET') {
+    $controller = new PollingController();
+    $controller->debugApiResponse();
+}
+
+// Rota de teste de mapeamento de pedido
+if ($uri === '/debug/order-mapping' && $requestMethod === 'GET') {
+    $controller = new PollingController();
+    $controller->testOrderMapping();
+}
+
 if ($uri === '/catalogo/categorias' && $requestMethod === 'GET') {
     $controller = new CatalogoController();
     $controller->getCategorias();

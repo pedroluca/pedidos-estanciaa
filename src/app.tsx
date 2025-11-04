@@ -4,6 +4,7 @@ import { ProtectedRoute } from './components/ProtectedRoute';
 import { Login } from './pages/Login';
 import { Dashboard } from './pages/Dashboard';
 import { Painel } from './pages/Painel';
+import { NovoPedido } from './pages/NovoPedido';
 
 function App() {
   return (
@@ -17,6 +18,14 @@ function App() {
             element={
               <ProtectedRoute>
                 <Dashboard />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/dashboard/novo-pedido"
+            element={
+              <ProtectedRoute>
+                <NovoPedido />
               </ProtectedRoute>
             }
           />

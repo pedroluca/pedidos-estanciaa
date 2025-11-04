@@ -65,7 +65,7 @@ class CatalogoController {
                     $category['id'],
                     $category['name'],
                     $category['description'] ?? '',
-                    $category['image'] ?? null,
+                    isset($category['image']['image_url']) ? $category['image']['image_url'] : null,
                     $category['status'] === 'ACTIVE' ? 1 : 0,
                     $category['index'] ?? 0
                 ]);
@@ -74,12 +74,7 @@ class CatalogoController {
 
                 // Insere ou atualiza itens
                 foreach ($category['items'] as $item) {
-                    $imageUrl = null;
-                    if (isset($item['image']['image_url'])) {
-                        $imageUrl = $item['image']['image_url'];
-                    } elseif (isset($item['image']['thumbnail_url'])) {
-                        $imageUrl = $item['image']['thumbnail_url'];
-                    }
+                    $imageUrl = isset($item['image']['image_url']) ? $item['image']['image_url'] : null;
 
                     $stmt = $this->db->prepare('
                         INSERT INTO itens (id, categoria_id, nome, descricao, imagem, preco, 

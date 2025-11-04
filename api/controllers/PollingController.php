@@ -10,6 +10,113 @@ class PollingController {
         $this->db = Database::getInstance()->getConnection();
     }
 
+    // Endpoint de debug para ver a resposta bruta da API
+    public function debugApiResponse() {
+        $apiUrl = $_ENV['CARDAPIO_API_URL'] ?? 'https://integracao.cardapioweb.com';
+        $token = $_ENV['CARDAPIO_API_TOKEN'] ?? '';
+
+        if (empty($token)) {
+            Response::error('Token do Cardápio Web não configurado', 500);
+        }
+
+        try {
+            // Testa API de Catálogo
+            $chCatalog = curl_init($apiUrl . '/api/partner/v1/catalog');
+            curl_setopt($chCatalog, CURLOPT_RETURNTRANSFER, true);
+            curl_setopt($chCatalog, CURLOPT_HTTPHEADER, [
+                'X-API-KEY: ' . $token,
+                'Content-Type: application/json'
+            ]);
+            $responseCatalog = curl_exec($chCatalog);
+            $httpCodeCatalog = curl_getinfo($chCatalog, CURLINFO_HTTP_CODE);
+            curl_close($chCatalog);
+
+            // Testa API de Pedidos
+            $chOrders = curl_init($apiUrl . '/api/partner/v1/orders');
+            curl_setopt($chOrders, CURLOPT_RETURNTRANSFER, true);
+            curl_setopt($chOrders, CURLOPT_HTTPHEADER, [
+                'X-API-KEY: ' . $token,
+                'Content-Type: application/json'
+            ]);
+            $responseOrders = curl_exec($chOrders);
+            $httpCodeOrders = curl_getinfo($chOrders, CURLINFO_HTTP_CODE);
+            curl_close($chOrders);
+
+            Response::json([
+                'catalog' => [
+                    'http_code' => $httpCodeCatalog,
+                    'data' => json_decode($responseCatalog, true)
+                ],
+                'orders' => [
+                    'http_code' => $httpCodeOrders,
+                    'data' => json_decode($responseOrders, true)
+                ]
+            ]);
+        } catch (Exception $e) {
+            Response::error('Erro ao testar API: ' . $e->getMessage(), 500);
+        }
+    }
+
+    // Endpoint de debug para testar um pedido específico
+    public function testOrderMapping() {
+        $apiUrl = $_ENV['CARDAPIO_API_URL'] ?? 'https://integracao.cardapioweb.com';
+        $token = $_ENV['CARDAPIO_API_TOKEN'] ?? '';
+
+        // Pega um pedido recente da lista
+        $ch = curl_init($apiUrl . '/api/partner/v1/orders');
+        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+        curl_setopt($ch, CURLOPT_HTTPHEADER, [
+            'X-API-KEY: ' . $token,
+            'Content-Type: application/json'
+        ]);
+        
+        $response = curl_exec($ch);
+        curl_close($ch);
+        
+        $orders = json_decode($response, true);
+        if (!is_array($orders) || empty($orders)) {
+            Response::error('Nenhum pedido encontrado', 404);
+        }
+
+        $firstOrderId = $orders[0]['id'];
+
+        // Busca detalhes do primeiro pedido
+        $chDetail = curl_init($apiUrl . '/api/partner/v1/orders/' . $firstOrderId);
+        curl_setopt($chDetail, CURLOPT_RETURNTRANSFER, true);
+        curl_setopt($chDetail, CURLOPT_HTTPHEADER, [
+            'X-API-KEY: ' . $token,
+            'Content-Type: application/json'
+        ]);
+        
+        $detailResponse = curl_exec($chDetail);
+        $detailHttpCode = curl_getinfo($chDetail, CURLINFO_HTTP_CODE);
+        curl_close($chDetail);
+
+        $order = json_decode($detailResponse, true);
+
+        // Mostra o mapeamento
+        $mapped = [
+            'raw_api_response' => $order,
+            'mapped_data' => [
+                'numero_pedido' => $order['display_id'] ?? $order['id'] ?? '',
+                'id_interno_api' => $order['id'] ?? '',
+                'nome_cliente' => $order['customer']['name'] ?? 'Cliente',
+                'telefone_cliente' => $order['customer']['phone'] ?? '',
+                'schedule' => $order['schedule'] ?? null,
+                'created_at' => $order['created_at'] ?? null,
+                'status' => $order['status'] ?? '',
+                'order_type' => $order['order_type'] ?? '',
+                'delivery_address' => $order['delivery_address'] ?? null,
+                'observation' => $order['observation'] ?? '',
+                'total' => $order['total'] ?? 0,
+                'items_count' => count($order['items'] ?? []),
+                'items_sample' => array_slice($order['items'] ?? [], 0, 2)
+            ]
+        ];
+
+        Response::json($mapped);
+    }
+
     public function pollOrders() {
         $apiUrl = $_ENV['CARDAPIO_API_URL'] ?? 'https://integracao.cardapioweb.com';
         $token = $_ENV['CARDAPIO_API_TOKEN'] ?? '';
@@ -19,7 +126,7 @@ class PollingController {
         }
 
         try {
-            // Busca pedidos da API do Cardápio Web
+            // Busca lista de pedidos
             $ch = curl_init($apiUrl . '/api/partner/v1/orders');
             curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
             curl_setopt($ch, CURLOPT_HTTPHEADER, [
@@ -35,42 +142,69 @@ class PollingController {
                 Response::error('Erro ao buscar pedidos do Cardápio Web: ' . $response, 500);
             }
 
-            $data = json_decode($response, true);
+            $orders = json_decode($response, true);
             
-            if (!isset($data['orders']) && !is_array($data)) {
+            if (!is_array($orders)) {
                 Response::error('Formato de resposta inválido', 500);
             }
-
-            // Se a resposta for direto um array de pedidos
-            $orders = isset($data['orders']) ? $data['orders'] : $data;
 
             $this->db->beginTransaction();
 
             $novos = 0;
             $atualizados = 0;
+            $erros = [];
 
-            foreach ($orders as $order) {
-                $numeroPedido = $order['order_number'] ?? $order['id'] ?? null;
+            foreach ($orders as $orderBasic) {
+                $orderId = $orderBasic['id'];
                 
-                if (!$numeroPedido) continue;
+                // Busca detalhes completos do pedido
+                $chDetail = curl_init($apiUrl . '/api/partner/v1/orders/' . $orderId);
+                curl_setopt($chDetail, CURLOPT_RETURNTRANSFER, true);
+                curl_setopt($chDetail, CURLOPT_HTTPHEADER, [
+                    'X-API-KEY: ' . $token,
+                    'Content-Type: application/json'
+                ]);
+                
+                $detailResponse = curl_exec($chDetail);
+                $detailHttpCode = curl_getinfo($chDetail, CURLINFO_HTTP_CODE);
+                curl_close($chDetail);
 
+                if ($detailHttpCode !== 200) {
+                    $erros[] = "Pedido {$orderId}: Erro HTTP {$detailHttpCode}";
+                    continue;
+                }
+
+                $order = json_decode($detailResponse, true);
+                
+                if (!$order) {
+                    $erros[] = "Pedido {$orderId}: JSON inválido";
+                    continue;
+                }
+
+                // Usa display_id ao invés de id para mostrar ao usuário
+                $numeroPedido = $order['display_id'] ?? $order['id'] ?? $orderId;
+                
                 // Verifica se o pedido já existe
-                $stmt = $this->db->prepare('SELECT id, status, data_atualizacao FROM pedidos WHERE numero_pedido = ?');
+                $stmt = $this->db->prepare('SELECT id, status FROM pedidos WHERE numero_pedido = ?');
                 $stmt->execute([$numeroPedido]);
                 $existing = $stmt->fetch(PDO::FETCH_ASSOC);
 
-                if (!$existing) {
-                    // Pedido novo - insere
-                    $this->insertOrder($order);
-                    $novos++;
-                } else {
-                    // Pedido existe - verifica se houve mudanças
-                    $statusNovo = $this->mapStatus($order['status'] ?? 'pending');
-                    
-                    if ($existing['status'] !== $statusNovo || $this->hasItemChanges($existing['id'], $order['items'] ?? [])) {
-                        $this->updateOrder($existing['id'], $order);
-                        $atualizados++;
+                try {
+                    if (!$existing) {
+                        // Pedido novo - insere
+                        $this->insertOrder($order);
+                        $novos++;
+                    } else {
+                        // Pedido existe - verifica se status mudou
+                        $statusNovo = $this->mapStatus($order['status'] ?? 'pending');
+                        
+                        if ($existing['status'] !== $statusNovo) {
+                            $this->updateOrder($existing['id'], $order);
+                            $atualizados++;
+                        }
                     }
+                } catch (Exception $e) {
+                    $erros[] = "Pedido {$orderId}: {$e->getMessage()}";
                 }
             }
 
@@ -80,7 +214,8 @@ class PollingController {
                 'success' => true,
                 'novos' => $novos,
                 'atualizados' => $atualizados,
-                'total' => count($orders)
+                'total' => count($orders),
+                'erros' => $erros
             ]);
 
         } catch (Exception $e) {
@@ -98,15 +233,55 @@ class PollingController {
             ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         ');
 
-        $numeroPedido = $order['order_number'] ?? $order['id'];
-        $nomeCliente = $order['customer_name'] ?? $order['client']['name'] ?? 'Cliente';
-        $telefone = $order['customer_phone'] ?? $order['client']['phone'] ?? '';
-        $dataAgendamento = $order['scheduled_date'] ?? date('Y-m-d');
-        $horario = $order['scheduled_time'] ?? date('H:i:s');
-        $status = $this->mapStatus($order['status'] ?? 'pending');
-        $tipoEntrega = ($order['delivery_type'] ?? 'delivery') === 'pickup' ? 'RETIRADA' : 'DELIVERY';
-        $endereco = $order['delivery_address'] ?? '';
-        $observacoes = $order['notes'] ?? '';
+        // Mapeamento baseado na estrutura real da API Cardápio Web
+        // Usa display_id (número amigável) ao invés de id (UUID interno)
+        $numeroPedido = $order['display_id'] ?? $order['id'] ?? '';
+        $nomeCliente = $order['customer']['name'] ?? 'Cliente';
+        $telefone = $order['customer']['phone'] ?? '';
+        
+        // Data e horário: usa schedule se for pedido agendado, senão usa created_at
+        $apiStatus = $order['status'] ?? 'pending';
+        $schedule = $order['schedule'] ?? null;
+        
+        // Se o status for scheduled_confirmed, SEMPRE usa a data do schedule
+        if ($apiStatus === 'scheduled_confirmed' && $schedule && isset($schedule['scheduled_date_time_start'])) {
+            // Parse com timezone para evitar conversão incorreta
+            $dateTime = new DateTime($schedule['scheduled_date_time_start']);
+            $dataAgendamento = $dateTime->format('Y-m-d');
+            $horario = $dateTime->format('H:i:s');
+        } else {
+            // Para outros status, usa a data de criação
+            $createdAt = $order['created_at'] ?? null;
+            if ($createdAt) {
+                $dateTime = new DateTime($createdAt);
+                $dataAgendamento = $dateTime->format('Y-m-d');
+                $horario = $dateTime->format('H:i:s');
+            } else {
+                $dataAgendamento = date('Y-m-d');
+                $horario = date('H:i:s');
+            }
+        }
+        
+        $status = $this->mapStatus($apiStatus);
+        $tipoEntrega = ($order['order_type'] ?? 'delivery') === 'takeout' ? 'RETIRADA' : 'DELIVERY';
+        
+        // Endereço de entrega
+        $endereco = '';
+        if (isset($order['delivery_address']) && $order['delivery_address']) {
+            $addr = $order['delivery_address'];
+            $partes = array_filter([
+                $addr['street'] ?? '',
+                isset($addr['number']) ? 'nº ' . $addr['number'] : '',
+                $addr['neighborhood'] ?? '',
+                $addr['city'] ?? '',
+                isset($addr['state']) ? $addr['state'] : ''
+            ]);
+            $endereco = implode(', ', $partes);
+        }
+        
+        $observacoes = $order['observation'] ?? '';
+        
+        // Usa o valor total já calculado pela API
         $valorTotal = $order['total'] ?? 0;
 
         $stmt->execute([
@@ -143,7 +318,7 @@ class PollingController {
         ');
 
         $status = $this->mapStatus($order['status'] ?? 'pending');
-        $observacoes = $order['notes'] ?? '';
+        $observacoes = $order['observation'] ?? '';
         $valorTotal = $order['total'] ?? 0;
 
         $stmt->execute([$status, $observacoes, $valorTotal, $pedidoId]);
@@ -160,15 +335,25 @@ class PollingController {
     }
 
     private function insertOrderItem($pedidoId, $item) {
-        // Tenta encontrar o item pelo nome
-        $itemId = $item['item_id'] ?? null;
+        // Tenta encontrar o item pelo ID da API ou pelo nome
+        $apiItemId = $item['item_id'] ?? null;
+        $itemId = null;
+        
+        if ($apiItemId) {
+            // Busca pelo ID da API (assumindo que foi salvo no campo id da tabela itens)
+            $stmt = $this->db->prepare('SELECT id FROM itens WHERE id = ?');
+            $stmt->execute([$apiItemId]);
+            $result = $stmt->fetch(PDO::FETCH_ASSOC);
+            $itemId = $result ? $result['id'] : null;
+        }
         
         if (!$itemId) {
-            $nome = $item['name'] ?? $item['product_name'] ?? '';
+            // Busca pelo nome do item
+            $nome = $item['name'] ?? '';
             $stmt = $this->db->prepare('SELECT id FROM itens WHERE nome LIKE ? LIMIT 1');
             $stmt->execute(['%' . $nome . '%']);
             $result = $stmt->fetch(PDO::FETCH_ASSOC);
-            $itemId = $result ? $result['id'] : 0;
+            $itemId = $result ? $result['id'] : null;
         }
 
         if (!$itemId) return; // Skip se não encontrar o item
@@ -181,9 +366,9 @@ class PollingController {
         ');
 
         $quantidade = $item['quantity'] ?? 1;
-        $precoUnitario = $item['unit_price'] ?? $item['price'] ?? 0;
-        $precoTotal = $quantidade * $precoUnitario;
-        $obs = $item['notes'] ?? '';
+        $precoUnitario = $item['unit_price'] ?? 0;
+        $precoTotal = $item['total_price'] ?? ($quantidade * $precoUnitario);
+        $obs = $item['observation'] ?? '';
 
         $stmt->execute([
             $pedidoId,
@@ -205,13 +390,15 @@ class PollingController {
 
     private function mapStatus($apiStatus) {
         $statusMap = [
-            'pending' => 'Aguardando',
-            'confirmed' => 'Agendado',
-            'preparing' => 'Em Produção',
-            'ready' => 'Esperando Retirada',
-            'delivering' => 'Saiu para Entrega',
-            'delivered' => 'Finalizado',
-            'cancelled' => 'Cancelado'
+            'waiting_confirmation' => 'Aguardando',
+            'pending_payment' => 'Aguardando',
+            'pending_online_payment' => 'Aguardando',
+            'scheduled_confirmed' => 'Agendado',
+            'confirmed' => 'Em Produção',
+            'ready' => 'Em Produção',
+            'waiting_to_catch' => 'Esperando Retirada',
+            'released' => 'Saiu para Entrega',
+            'closed' => 'Finalizado'
         ];
 
         return $statusMap[$apiStatus] ?? 'Aguardando';

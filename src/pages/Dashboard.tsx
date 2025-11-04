@@ -1,7 +1,8 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import { LogOut, Plus, RefreshCw } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
+import { useOrderPolling } from '../hooks/useOrderPolling';
 import { api } from '../lib/api';
 import type { Pedido } from '../types';
 
@@ -9,9 +10,10 @@ export function Dashboard() {
   const { user, logout } = useAuth();
   const [pedidos, setPedidos] = useState<Pedido[]>([]);
   const [loading, setLoading] = useState(true);
+  const [syncLoading, setSyncLoading] = useState(false);
   const [filter, setFilter] = useState<'todos' | 'hoje' | 'futuro'>('hoje');
 
-  const loadPedidos = async () => {
+  const loadPedidos = useCallback(async () => {
     try {
       setLoading(true);
       const data = await api.getPedidos();
@@ -21,11 +23,27 @@ export function Dashboard() {
     } finally {
       setLoading(false);
     }
+  }, []);
+
+  // Ativa o polling automático a cada 1 minuto
+  useOrderPolling(loadPedidos);
+
+  const syncCatalogo = async () => {
+    try {
+      setSyncLoading(true);
+      await api.syncCatalog();
+      alert('Catálogo sincronizado com sucesso!');
+    } catch (error) {
+      console.error('Erro ao sincronizar catálogo:', error);
+      alert('Erro ao sincronizar catálogo');
+    } finally {
+      setSyncLoading(false);
+    }
   };
 
   useEffect(() => {
     loadPedidos();
-  }, []);
+  }, [loadPedidos]);
 
   const hoje = new Date().toISOString().split('T')[0];
   
@@ -36,7 +54,7 @@ export function Dashboard() {
   });
 
   const statusColors: Record<string, string> = {
-    "Em Produção": "bg-green-600",
+    "Em Produção": "bg-yellow-500",
     "Aguardando": "bg-amber-600",
     "Agendado": "bg-purple-600",
     "Finalizado": "bg-red-700",
@@ -104,6 +122,14 @@ export function Dashboard() {
 
           <div className="flex gap-2">
             <button
+              onClick={syncCatalogo}
+              className="px-4 py-2 bg-blue-700 hover:bg-blue-600 text-white rounded-lg transition flex items-center gap-2"
+              disabled={syncLoading}
+            >
+              <RefreshCw size={18} className={syncLoading ? 'animate-spin' : ''} />
+              {syncLoading ? 'Sincronizando...' : 'Sincronizar Catálogo'}
+            </button>
+            <button
               onClick={loadPedidos}
               className="px-4 py-2 bg-zinc-800 hover:bg-zinc-700 text-white rounded-lg transition flex items-center gap-2"
             >
@@ -152,26 +178,28 @@ export function Dashboard() {
                 <div className="text-sm text-zinc-400 space-y-1 mb-3">
                   <p>📅 {new Date(pedido.data_agendamento).toLocaleDateString('pt-BR')}</p>
                   <p>🕐 {pedido.horario_agendamento}</p>
-                  <p>📦 {pedido.itens.length} item(s)</p>
-                  <p>💰 R$ {pedido.valor_total.toFixed(2)}</p>
+                  <p>📦 {pedido.itens?.length || 0} item(s)</p>
+                  <p>💰 R$ {Number(pedido.valor_total || 0).toFixed(2)}</p>
                 </div>
 
                 {/* Miniaturas dos itens */}
-                <div className="flex gap-1 mb-3">
-                  {pedido.itens.slice(0, 3).map((item, idx) => (
-                    <img
-                      key={idx}
-                      src={item.imagem || 'https://placehold.co/100x100?text=Sem+Imagem'}
-                      alt={item.nome}
-                      className="w-16 h-16 object-cover rounded"
-                    />
-                  ))}
-                  {pedido.itens.length > 3 && (
-                    <div className="w-16 h-16 bg-zinc-800 rounded flex items-center justify-center text-zinc-400 text-sm">
-                      +{pedido.itens.length - 3}
-                    </div>
-                  )}
-                </div>
+                {pedido.itens && pedido.itens.length > 0 && (
+                  <div className="flex gap-1 mb-3">
+                    {pedido.itens.slice(0, 3).map((item, idx) => (
+                      <img
+                        key={idx}
+                        src={item.imagem || 'https://placehold.co/100x100?text=Sem+Imagem'}
+                        alt={item.nome}
+                        className="w-16 h-16 object-cover rounded"
+                      />
+                    ))}
+                    {pedido.itens.length > 3 && (
+                      <div className="w-16 h-16 bg-zinc-800 rounded flex items-center justify-center text-zinc-400 text-sm">
+                        +{pedido.itens.length - 3}
+                      </div>
+                    )}
+                  </div>
+                )}
 
                 <button className="w-full px-3 py-2 bg-zinc-800 hover:bg-zinc-700 text-white rounded-lg text-sm transition">
                   Ver Detalhes

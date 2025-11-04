@@ -73,6 +73,11 @@ class ApiClient {
     return this.request<any>('/catalogo/sync', { method: 'POST' });
   }
 
+  async pollOrders() {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    return this.request<any>('/pedidos/poll', { method: 'POST' });
+  }
+
   async getCategorias() {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     return this.request<any[]>('/catalogo/categorias');
