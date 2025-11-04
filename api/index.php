@@ -69,6 +69,12 @@ if ($uri === '/catalogo/sync' && $requestMethod === 'POST') {
     $controller->syncFromCardapio();
 }
 
+// Rota de polling de pedidos
+if ($uri === '/pedidos/poll' && $requestMethod === 'POST') {
+    $controller = new PollingController();
+    $controller->pollOrders();
+}
+
 if ($uri === '/catalogo/categorias' && $requestMethod === 'GET') {
     $controller = new CatalogoController();
     $controller->getCategorias();
