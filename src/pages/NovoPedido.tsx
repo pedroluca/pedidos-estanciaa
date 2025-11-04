@@ -121,6 +121,7 @@ export function NovoPedido() {
         data_agendamento: dataAgendamento,
         horario_agendamento: horarioAgendamento,
         tipo_entrega: 'DELIVERY',
+        status: 'Agendado',
         endereco_entrega: '',
         observacoes,
         itens: itensPedido.map(i => ({
