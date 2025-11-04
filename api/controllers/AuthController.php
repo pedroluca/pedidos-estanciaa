@@ -14,12 +14,13 @@ class AuthController {
     public function login() {
         $data = json_decode(file_get_contents('php://input'), true);
         
-        if (!isset($data['email']) || !isset($data['senha'])) {
+        // Aceita tanto 'senha' quanto 'password'
+        $email = $data['email'] ?? null;
+        $senha = $data['senha'] ?? $data['password'] ?? null;
+        
+        if (!$email || !$senha) {
             Response::error('Email e senha são obrigatórios', 400);
         }
-
-        $email = $data['email'];
-        $senha = $data['senha'];
 
         try {
             $stmt = $this->db->prepare('SELECT * FROM usuarios WHERE email = ? AND ativo = 1');
