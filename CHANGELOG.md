@@ -1,5 +1,70 @@
 # Alterações Implementadas - Sistema de Pedidos
 
+## ✅ [05/11/2025 - v1.2] Filtro de Itens Cancelados
+
+### 🐛 Problema Descoberto:
+**Caso Real (Pedido #26139)**: Cliente cancelou "Buquê M" e selecionou "Buquê P", mas ambos apareciam no sistema.
+
+**Causa**: A API retorna todos os itens na lista, incluindo os cancelados (com flag indicando cancelamento). O sistema inseria todos sem filtrar.
+
+### ✨ Solução:
+- Novo método `isItemCancelled($item)` que verifica múltiplos campos:
+  - `cancelled: true`
+  - `deleted: true`
+  - `status: 'cancelled'` (ou deleted, canceled, inactive)
+  - `active: false`
+- Filtro aplicado em `updateOrder()` e `verificarMudancaItens()`
+- Apenas itens **ativos** são inseridos no banco
+
+### 🔍 Debug:
+- Criado script `api/debug_cancelled_items.php`
+- Mostra estrutura completa dos itens da API
+- Detecta automaticamente quais campos indicam cancelamento
+
+### Arquivos Modificados:
+- `api/controllers/PollingController.php`
+  - Novo método: `isItemCancelled()`
+  - Filtro em `updateOrder()` e `verificarMudancaItens()`
+- 🆕 `api/debug_cancelled_items.php` - Script de debug
+
+### Resultado:
+- ✅ Itens cancelados não aparecem mais no sistema
+- ✅ Apenas itens ativos são salvos no banco
+- ✅ Substituições funcionam corretamente
+
+---
+
+## ✅ [05/11/2025 - v1.1] Correção: Sincronização de Itens dos Pedidos
+
+### 🐛 Bug Corrigido:
+**Problema**: Pedidos com itens alterados (cancelados/substituídos) no Cardápio Web não atualizavam no sistema.
+
+**Causa**: O polling só verificava mudanças no **status** do pedido, ignorando completamente mudanças nos **itens**.
+
+### ✨ Solução Implementada:
+- Novo método `verificarMudancaItens()` que compara:
+  - IDs dos itens (detecta adições/remoções)
+  - Quantidades (detecta alterações)
+- Polling agora atualiza quando: **status OU itens mudarem**
+
+### Arquivos Modificados:
+- `api/controllers/PollingController.php`
+  - Novo método: `verificarMudancaItens()`
+  - Lógica atualizada em `pollOrders()` (linha ~205)
+
+### Cenários Agora Cobertos:
+- ✅ Item cancelado → Removido do banco
+- ✅ Item adicionado → Inserido no banco
+- ✅ Item substituído → Antigo removido, novo inserido
+- ✅ Quantidade alterada → Atualizada
+- ✅ Edição manual → Continua protegida
+
+### Deploy:
+📄 Guia: `DEPLOY-FIX-ITEM-SYNC.md`  
+📋 Documentação: `FIX-ITEM-SYNC.md`
+
+---
+
 ## ✅ 1. Mudança de ID para DISPLAY_ID
 
 ### O que foi alterado:

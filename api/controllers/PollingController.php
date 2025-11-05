@@ -200,10 +200,11 @@ class PollingController {
                             continue;
                         }
                         
-                        // Pedido existe - verifica se status mudou
+                        // Pedido existe - verifica se status mudou OU se itens mudaram
                         $statusNovo = $this->mapStatus($order['status'] ?? 'pending');
+                        $itensMudaram = $this->verificarMudancaItens($existing['id'], $order['items'] ?? []);
                         
-                        if ($existing['status'] !== $statusNovo) {
+                        if ($existing['status'] !== $statusNovo || $itensMudaram) {
                             $this->updateOrder($existing['id'], $order);
                             $atualizados++;
                         }
@@ -312,6 +313,59 @@ class PollingController {
         }
     }
 
+    private function verificarMudancaItens($pedidoId, $novosItens) {
+        // Busca itens atuais do pedido
+        $stmt = $this->db->prepare('
+            SELECT item_id, quantidade 
+            FROM pedidos_itens 
+            WHERE pedido_id = ?
+            ORDER BY item_id
+        ');
+        $stmt->execute([$pedidoId]);
+        $itensAtuais = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+        // Cria arrays para comparação - usar item_id da API
+        $idsAtuais = [];
+        $quantidadesAtuais = [];
+        foreach ($itensAtuais as $item) {
+            $idsAtuais[] = $item['item_id'];
+            $quantidadesAtuais[$item['item_id']] = $item['quantidade'];
+        }
+
+        $idsNovos = [];
+        $quantidadesNovas = [];
+        foreach ($novosItens as $item) {
+            // Ignora itens cancelados na comparação
+            if ($this->isItemCancelled($item)) {
+                continue;
+            }
+            
+            $itemId = $item['item_id'] ?? null;
+            if ($itemId) {
+                $idsNovos[] = $itemId;
+                $quantidadesNovas[$itemId] = $item['quantity'] ?? 1;
+            }
+        }
+
+        sort($idsAtuais);
+        sort($idsNovos);
+
+        // Verifica se a lista de IDs é diferente
+        if ($idsAtuais !== $idsNovos) {
+            return true;
+        }
+
+        // Verifica se as quantidades mudaram
+        foreach ($idsNovos as $id) {
+            if (!isset($quantidadesAtuais[$id]) || 
+                $quantidadesAtuais[$id] != $quantidadesNovas[$id]) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
     private function updateOrder($pedidoId, $order) {
         $stmt = $this->db->prepare('
             UPDATE pedidos SET 
@@ -334,9 +388,28 @@ class PollingController {
 
         if (isset($order['items']) && is_array($order['items'])) {
             foreach ($order['items'] as $item) {
+                // Ignora itens cancelados
+                if ($this->isItemCancelled($item)) {
+                    continue;
+                }
                 $this->insertOrderItem($pedidoId, $item);
             }
         }
+    }
+
+    private function isItemCancelled($item) {
+        // Verifica se o item foi cancelado/deletado
+        // A API pode usar diferentes campos para indicar cancelamento
+        
+        // Verifica campo 'status'
+        if (isset($item['status'])) {
+            $cancelledStatuses = ['canceled'];
+            if (in_array(strtolower($item['status']), $cancelledStatuses)) {
+                return true;
+            }
+        }
+        
+        return false;
     }
 
     private function insertOrderItem($pedidoId, $item) {
