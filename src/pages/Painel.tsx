@@ -306,7 +306,12 @@ export function Painel() {
                       <h3 className="text-white font-medium mb-1 text-lg">{item.nome}</h3>
                       <p className="text-gray-400">Quantidade: {item.quantidade}</p>
                       {item.observacoes && (
-                        <p className="text-gray-500 text-sm mt-2">{item.observacoes}</p>
+                        // <p className="text-gray-500 text-sm mt-2">{item.observacoes}</p>
+                        
+                        <div className="mt-4 p-3 bg-amber-900/30 border border-amber-700/50 rounded-lg">
+                          <p className="text-amber-200 font-semibold text-sm mb-1">⚠️ Observações do Item:</p>
+                          <p className="text-amber-100 text-sm">{item.observacoes}</p>
+                        </div>
                       )}
                     </div>
                   </div>
