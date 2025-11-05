@@ -513,6 +513,7 @@ class PollingController {
             'ready' => 'Em Produção',
             'waiting_to_catch' => 'Esperando Retirada',
             'released' => 'Saiu para Entrega',
+            'canceled' => 'Cancelado',
             'closed' => 'Finalizado'
         ];
 

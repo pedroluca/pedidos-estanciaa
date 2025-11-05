@@ -70,10 +70,11 @@ export function Painel() {
   });
 
   const statusColors: Record<string, string> = {
-    "Em Produção": "bg-yellow-500",
-    "Aguardando": "bg-amber-600",
+    "Em Produção": "bg-orange-500",
+    "Aguardando": "bg-cyan-600",
     "Agendado": "bg-purple-600",
-    "Finalizado": "bg-red-700",
+    "Finalizado": "bg-green-700",
+    "Cancelado": "bg-red-700",
     "Saiu para Entrega": "bg-yellow-600",
     "Esperando Retirada": "bg-lime-600",
   };
