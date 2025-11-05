@@ -134,7 +134,7 @@ export function Painel() {
         </h2>
 
         <div className="relative overflow-visible">
-          <div className="flex gap-6 overflow-x-auto scroll-smooth pt-6 px-1 [&::-webkit-scrollbar]:h-2 [&::-webkit-scrollbar-thumb]:bg-gray-600 [&::-webkit-scrollbar-thumb]:rounded-full">
+          <div className="flex gap-6 overflow-x-auto scroll-smooth pt-3 px-1 [&::-webkit-scrollbar]:h-2 [&::-webkit-scrollbar-thumb]:bg-gray-600 [&::-webkit-scrollbar-thumb]:rounded-full">
             {manha.length === 0 ? (
               <div className="text-gray-500 italic">Nenhum pedido nesta seção.</div>
             ) : (
@@ -194,7 +194,7 @@ export function Painel() {
         </h2>
 
         <div className="relative overflow-visible">
-          <div className="flex gap-6 overflow-x-auto scroll-smooth pt-6 px-1 [&::-webkit-scrollbar]:h-2 [&::-webkit-scrollbar-thumb]:bg-gray-600 [&::-webkit-scrollbar-thumb]:rounded-full">
+          <div className="flex gap-6 overflow-x-auto scroll-smooth pt-3 px-1 [&::-webkit-scrollbar]:h-2 [&::-webkit-scrollbar-thumb]:bg-gray-600 [&::-webkit-scrollbar-thumb]:rounded-full">
             {tarde.length === 0 ? (
               <div className="text-gray-500 italic">Nenhum pedido nesta seção.</div>
             ) : (
