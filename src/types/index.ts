@@ -55,6 +55,7 @@ export interface Pedido {
   endereco_entrega: string | null;
   observacoes: string | null;
   valor_total: number;
+  is_feito: boolean;
   itens: ItemPedido[];
 }
 

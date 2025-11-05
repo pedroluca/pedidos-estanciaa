@@ -135,6 +135,21 @@ class ApiClient {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     return this.request<any[]>(`/pedidos/painel${query}`);
   }
+
+  // Produção
+  async togglePedidoFeito(pedidoId: number) {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    return this.request<any>('/producao/toggle', {
+      method: 'POST',
+      body: JSON.stringify({ pedido_id: pedidoId }),
+    });
+  }
+
+  async getPainelProducao(data?: string) {
+    const query = data ? `?data=${data}` : '';
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    return this.request<any[]>(`/producao/painel${query}`);
+  }
 }
 
 export const api = new ApiClient();

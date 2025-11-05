@@ -10,11 +10,14 @@ export function Painel() {
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [selectedPedido, setSelectedPedido] = useState<Pedido | null>(null);
   const [zoomedImage, setZoomedImage] = useState<string | null>(null);
+  const [dataSelecionada, setDataSelecionada] = useState<string>(new Date().toISOString().split('T')[0]);
+  const [isEditingDate, setIsEditingDate] = useState(false);
+  const [tempDate, setTempDate] = useState<string>(new Date().toISOString().split('T')[0]);
 
   const loadPedidos = async () => {
     try {
       setLoading(true);
-      const data = await api.getPainelPedidos();
+      const data = await api.getPainelProducao(dataSelecionada);
       setPedidos(data);
     } catch (error) {
       console.error('Erro ao carregar pedidos:', error);
@@ -23,14 +26,28 @@ export function Painel() {
     }
   };
 
+  const handleToggleFeito = async (pedidoId: number) => {
+    try {
+      await api.togglePedidoFeito(pedidoId);
+      // Recarrega os pedidos após atualizar
+      await loadPedidos();
+    } catch (error) {
+      console.error('Erro ao atualizar status de produção:', error);
+    }
+  };
+
   // Ativa o polling automático a cada 1 minuto
   useOrderPolling(loadPedidos);
 
   useEffect(() => {
     loadPedidos();
-    const interval = setInterval(loadPedidos, 30000); // Atualiza a cada 30 segundos
-    return () => clearInterval(interval);
-  }, []);
+    // Só ativa o intervalo se não estiver editando a data
+    if (!isEditingDate) {
+      const interval = setInterval(loadPedidos, 30000); // Atualiza a cada 30 segundos
+      return () => clearInterval(interval);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [dataSelecionada, isEditingDate]);
 
   const handleFullscreen = () => {
     if (!isFullscreen) {
@@ -81,20 +98,43 @@ export function Painel() {
       </button>
 
       {/* Cabeçalho */}
-      <div className="flex flex-col sm:flex-row items-center justify-center h-[10%] w-full">
-        <h1 className="text-3xl font-semibold text-center sm:text-left mb-4 sm:mb-0">
+      <div className="flex flex-col sm:flex-row items-center justify-between h-[6%] w-full gap-4 pr-16">
+        <h1 className="text-3xl font-semibold text-center sm:text-left">
           Floricultura Estância-A - Painel de Produção
         </h1>
+        
+        {/* Seletor de Data */}
+        <div className="flex items-center gap-3 bg-[#1e1e1e] border border-gray-700 rounded-lg px-4 py-2 min-w-[200px]">
+          <input
+            type="date"
+            value={isEditingDate ? tempDate : dataSelecionada}
+            onChange={(e) => setTempDate(e.target.value)}
+            onFocus={() => {
+              setIsEditingDate(true);
+              setTempDate(dataSelecionada);
+            }}
+            onBlur={() => {
+              setIsEditingDate(false);
+              if (tempDate && tempDate.length === 10) {
+                setDataSelecionada(tempDate);
+              }
+            }}
+            className="bg-transparent text-white outline-none cursor-pointer w-full"
+            style={{
+              colorScheme: 'dark'
+            }}
+          />
+        </div>
       </div>
 
       {/* Pedidos da Manhã */}
-      <div className="w-full h-[45%]">
+      <div className="w-full h-[47%]">
         <h2 className="text-xl font-medium text-gray-300 mb-4 flex items-center gap-2 pl-1">
           🌅 Pedidos da Manhã
         </h2>
 
-        <div className="relative">
-          <div className="flex gap-6 overflow-x-auto scroll-smooth pb-4 px-1 [&::-webkit-scrollbar]:h-2 [&::-webkit-scrollbar-thumb]:bg-gray-600 [&::-webkit-scrollbar-thumb]:rounded-full">
+        <div className="relative overflow-visible">
+          <div className="flex gap-6 overflow-x-auto scroll-smooth pt-6 px-1 [&::-webkit-scrollbar]:h-2 [&::-webkit-scrollbar-thumb]:bg-gray-600 [&::-webkit-scrollbar-thumb]:rounded-full">
             {manha.length === 0 ? (
               <div className="text-gray-500 italic">Nenhum pedido nesta seção.</div>
             ) : (
@@ -102,38 +142,33 @@ export function Painel() {
                 <div
                   key={pedido.id}
                   onClick={() => setSelectedPedido(pedido)}
-                  className="shrink-0 rounded-2xl p-6 bg-[#1e1e1e] border border-gray-700 shadow-sm cursor-pointer hover:scale-105 transition-transform w-72"
+                  className="shrink-0 rounded-2xl p-3 bg-[#1e1e1e] border border-gray-700 shadow-sm cursor-pointer hover:scale-105 transition-transform w-72 relative"
                 >
+                  {/* Badge PRODUZIDO */}
+                  {pedido.is_feito && (
+                    <div className="absolute top-0 -right-3 bg-emerald-600 text-white text-xs font-bold px-4 py-2 rounded-full shadow-lg rotate-12 z-50">
+                      ✓ PRODUZIDO
+                    </div>
+                  )}
+
                   <h3 className="text-lg font-medium mb-3">Pedido #{pedido.numero_pedido}</h3>
                   
-                  {/* Imagens dos itens */}
+                  {/* Imagem do primeiro item */}
                   {pedido.itens && pedido.itens.length > 0 ? (
-                    <>
-                      <div className="grid grid-cols-2 gap-2 mb-4">
-                        {pedido.itens.slice(0, 4).map((item, idx) => (
-                          <div key={idx} className="relative">
-                            <img
-                              src={item.imagem || 'https://placehold.co/200x200/1e1e1e/aaa?text=Sem+Imagem'}
-                              alt={item.nome}
-                              className="w-full h-32 object-cover rounded-lg"
-                            />
-                            {item.quantidade > 1 && (
-                              <span className="absolute top-1 right-1 bg-red-600 text-white text-xs font-semibold px-2 py-0.5 rounded-full">
-                                x{item.quantidade}
-                              </span>
-                            )}
-                          </div>
-                        ))}
-                      </div>
-
-                      {pedido.itens.length > 4 && (
-                        <div className="text-sm text-gray-400 mb-3">
-                          +{pedido.itens.length - 4} item(s) a mais
-                        </div>
+                    <div className="relative mb-2">
+                      <img
+                        src={pedido.itens[0].imagem || 'https://placehold.co/200x200/1e1e1e/aaa?text=Sem+Imagem'}
+                        alt={pedido.itens[0].nome}
+                        className="w-full h-36 2xl:h-48 object-cover rounded-lg"
+                      />
+                      {pedido.itens.length > 1 && (
+                        <span className="absolute top-2 right-2 bg-red-600 text-white text-sm font-bold px-3 py-1.5 rounded-full shadow-lg">
+                          +{pedido.itens.length - 1} {pedido.itens.length === 2 ? 'item' : 'itens'}
+                        </span>
                       )}
-                    </>
+                    </div>
                   ) : (
-                    <div className="text-gray-500 italic text-sm mb-4 h-32 flex items-center justify-center border border-gray-700 rounded-lg">
+                    <div className="text-gray-500 italic text-sm mb-4 h-36 2xl:h-48 flex items-center justify-center border border-gray-700 rounded-lg">
                       Sem itens cadastrados
                     </div>
                   )}
@@ -153,13 +188,13 @@ export function Painel() {
       </div>
 
       {/* Pedidos da Tarde */}
-      <div className="w-full h-[45%]">
+      <div className="w-full h-[47%]">
         <h2 className="text-xl font-medium text-gray-300 mb-4 flex items-center gap-2 pl-1">
           🌇 Pedidos da Tarde
         </h2>
 
-        <div className="relative">
-          <div className="flex gap-6 overflow-x-auto scroll-smooth pb-4 px-1 [&::-webkit-scrollbar]:h-2 [&::-webkit-scrollbar-thumb]:bg-gray-600 [&::-webkit-scrollbar-thumb]:rounded-full">
+        <div className="relative overflow-visible">
+          <div className="flex gap-6 overflow-x-auto scroll-smooth pt-6 px-1 [&::-webkit-scrollbar]:h-2 [&::-webkit-scrollbar-thumb]:bg-gray-600 [&::-webkit-scrollbar-thumb]:rounded-full">
             {tarde.length === 0 ? (
               <div className="text-gray-500 italic">Nenhum pedido nesta seção.</div>
             ) : (
@@ -167,38 +202,33 @@ export function Painel() {
                 <div
                   key={pedido.id}
                   onClick={() => setSelectedPedido(pedido)}
-                  className="shrink-0 rounded-2xl p-6 bg-[#1e1e1e] border border-gray-700 shadow-sm cursor-pointer hover:scale-105 transition-transform w-72"
+                  className="shrink-0 rounded-2xl p-3 bg-[#1e1e1e] border border-gray-700 shadow-sm cursor-pointer hover:scale-105 transition-transform w-72 relative"
                 >
+                  {/* Badge PRODUZIDO */}
+                  {pedido.is_feito && (
+                    <div className="absolute top-0 -right-3 bg-emerald-600 text-white text-xs font-bold px-4 py-2 rounded-full shadow-lg rotate-12 z-50">
+                      ✓ PRODUZIDO
+                    </div>
+                  )}
+
                   <h3 className="text-lg font-medium mb-3">Pedido #{pedido.numero_pedido}</h3>
                   
-                  {/* Imagens dos itens */}
+                  {/* Imagem do primeiro item */}
                   {pedido.itens && pedido.itens.length > 0 ? (
-                    <>
-                      <div className="grid grid-cols-2 gap-2 mb-4">
-                        {pedido.itens.slice(0, 4).map((item, idx) => (
-                          <div key={idx} className="relative">
-                            <img
-                              src={item.imagem || 'https://placehold.co/200x200/1e1e1e/aaa?text=Sem+Imagem'}
-                              alt={item.nome}
-                              className="w-full h-32 object-cover rounded-lg"
-                            />
-                            {item.quantidade > 1 && (
-                              <span className="absolute top-1 right-1 bg-red-600 text-white text-xs font-semibold px-2 py-0.5 rounded-full">
-                                x{item.quantidade}
-                              </span>
-                            )}
-                          </div>
-                        ))}
-                      </div>
-
-                      {pedido.itens.length > 4 && (
-                        <div className="text-sm text-gray-400 mb-3">
-                          +{pedido.itens.length - 4} item(s) a mais
-                        </div>
+                    <div className="relative mb-2">
+                      <img
+                        src={pedido.itens[0].imagem || 'https://placehold.co/200x200/1e1e1e/aaa?text=Sem+Imagem'}
+                        alt={pedido.itens[0].nome}
+                        className="w-full h-36 2xl:h-48 object-cover rounded-lg"
+                      />
+                      {pedido.itens.length > 1 && (
+                        <span className="absolute top-2 right-2 bg-red-600 text-white text-sm font-bold px-3 py-1.5 rounded-full shadow-lg">
+                          +{pedido.itens.length - 1} {pedido.itens.length === 2 ? 'item' : 'itens'}
+                        </span>
                       )}
-                    </>
+                    </div>
                   ) : (
-                    <div className="text-gray-500 italic text-sm mb-4 h-32 flex items-center justify-center border border-gray-700 rounded-lg">
+                    <div className="text-gray-500 italic text-sm mb-4 h-36 2xl:h-48 flex items-center justify-center border border-gray-700 rounded-lg">
                       Sem itens cadastrados
                     </div>
                   )}
@@ -275,6 +305,23 @@ export function Painel() {
                   Nenhum item cadastrado neste pedido
                 </div>
               )}
+            </div>
+
+            {/* Botão para marcar como produzido */}
+            <div className="mt-6 flex gap-4">
+              <button
+                onClick={() => {
+                  handleToggleFeito(selectedPedido.id);
+                  setSelectedPedido(null);
+                }}
+                className={`flex-1 py-3 rounded-lg font-semibold text-lg transition-colors ${
+                  selectedPedido.is_feito
+                    ? 'bg-gray-700 hover:bg-gray-600 text-gray-300'
+                    : 'bg-emerald-700 hover:bg-emerald-600 text-white'
+                }`}
+              >
+                {selectedPedido.is_feito ? '✕ Desmarcar Produzido' : '✓ Marcar como Produzido'}
+              </button>
             </div>
           </div>
         </div>

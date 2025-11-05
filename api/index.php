@@ -133,5 +133,16 @@ if ($uri === '/pedidos/painel' && $requestMethod === 'GET') {
     $controller->getPainel();
 }
 
+// Rotas de produção
+if ($uri === '/producao/toggle' && $requestMethod === 'POST') {
+    $controller = new ProducaoController();
+    $controller->toggleFeito();
+}
+
+if ($uri === '/producao/painel' && $requestMethod === 'GET') {
+    $controller = new ProducaoController();
+    $controller->getPainelProducao();
+}
+
 // Rota não encontrada
 Response::error('Rota não encontrada', 404);
