@@ -185,7 +185,7 @@ class PollingController {
                 $numeroPedido = $order['display_id'] ?? $order['id'] ?? $orderId;
                 
                 // Verifica se o pedido já existe
-                $stmt = $this->db->prepare('SELECT id, status FROM pedidos WHERE numero_pedido = ?');
+                $stmt = $this->db->prepare('SELECT id, status, editado_manualmente FROM pedidos WHERE numero_pedido = ?');
                 $stmt->execute([$numeroPedido]);
                 $existing = $stmt->fetch(PDO::FETCH_ASSOC);
 
@@ -195,6 +195,11 @@ class PollingController {
                         $this->insertOrder($order);
                         $novos++;
                     } else {
+                        // Pula atualização se o pedido foi editado manualmente
+                        if ($existing['editado_manualmente'] == 1) {
+                            continue;
+                        }
+                        
                         // Pedido existe - verifica se status mudou
                         $statusNovo = $this->mapStatus($order['status'] ?? 'pending');
                         

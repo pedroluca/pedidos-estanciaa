@@ -173,8 +173,9 @@ export function Painel() {
                     </div>
                   )}
 
-                  <div className="text-gray-400 text-sm mb-2">
-                    Horário: {pedido.horario_agendamento}
+                  <div className="bg-blue-600/20 border border-blue-500/30 rounded-lg px-3 py-2 mb-2">
+                    <span className="text-blue-300 text-xs font-medium">🕐 Horário:</span>
+                    <span className="text-blue-100 text-sm font-bold ml-2">{pedido.horario_agendamento}</span>
                   </div>
 
                   <div className={`${statusColors[pedido.status] || 'bg-gray-600'} text-white text-sm px-3 py-1 rounded-md text-center`}>
@@ -233,8 +234,9 @@ export function Painel() {
                     </div>
                   )}
 
-                  <div className="text-gray-400 text-sm mb-2">
-                    Horário: {pedido.horario_agendamento}
+                  <div className="bg-blue-600/20 border border-blue-500/30 rounded-lg px-3 py-2 mb-2">
+                    <span className="text-blue-300 text-xs font-medium">🕐 Horário:</span>
+                    <span className="text-blue-100 text-sm font-bold ml-2">{pedido.horario_agendamento}</span>
                   </div>
 
                   <div className={`${statusColors[pedido.status] || 'bg-gray-600'} text-white text-sm px-3 py-1 rounded-md text-center`}>
@@ -269,6 +271,14 @@ export function Painel() {
                   <br />
                   Status: <span className="text-gray-200 font-medium">{selectedPedido.status}</span>
                 </p>
+                
+                {/* Observações do Pedido */}
+                {selectedPedido.observacoes && (
+                  <div className="mt-4 p-3 bg-amber-900/30 border border-amber-700/50 rounded-lg">
+                    <p className="text-amber-200 font-semibold text-sm mb-1">⚠️ Observações do Pedido:</p>
+                    <p className="text-amber-100 text-sm">{selectedPedido.observacoes}</p>
+                  </div>
+                )}
               </div>
               <button
                 onClick={() => setSelectedPedido(null)}

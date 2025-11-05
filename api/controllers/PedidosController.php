@@ -203,6 +203,8 @@ class PedidosController {
                 $params[] = $data['observacoes'];
             }
 
+            // Marca como editado manualmente para proteger do polling
+            $fields[] = 'editado_manualmente = 1';
             $fields[] = 'data_atualizacao = NOW()';
             $params[] = $id;
 

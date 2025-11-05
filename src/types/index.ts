@@ -56,6 +56,7 @@ export interface Pedido {
   observacoes: string | null;
   valor_total: number;
   is_feito: boolean;
+  editado_manualmente: boolean;
   itens: ItemPedido[];
 }
 

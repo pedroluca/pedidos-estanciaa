@@ -62,12 +62,14 @@ CREATE TABLE IF NOT EXISTS pedidos (
   observacoes TEXT,
   valor_total DECIMAL(10, 2) DEFAULT 0,
   is_feito TINYINT(1) DEFAULT 0,
+  editado_manualmente TINYINT(1) DEFAULT 0,
   data_atualizacao TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   INDEX idx_numero_pedido (numero_pedido),
   INDEX idx_data_agendamento (data_agendamento),
   INDEX idx_status (status),
   INDEX idx_data_criacao (data_criacao),
-  INDEX idx_is_feito (is_feito)
+  INDEX idx_is_feito (is_feito),
+  INDEX idx_editado_manualmente (editado_manualmente)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- Tabela de relacionamento pedidos <-> itens

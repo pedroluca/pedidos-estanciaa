@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { Link } from 'react-router-dom';
-import { LogOut, Plus, RefreshCw, X } from 'lucide-react';
+import { LogOut, Plus, RefreshCw, X, Edit2, Save } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
 import { useOrderPolling } from '../hooks/useOrderPolling';
 import { api } from '../lib/api';
@@ -14,6 +14,13 @@ export function Dashboard() {
   const [filter, setFilter] = useState<'todos' | 'hoje' | 'futuro'>('hoje');
   const [statusFilter, setStatusFilter] = useState<string[]>(['Aguardando', 'Em Produção', 'Agendado', 'Saiu para Entrega', 'Esperando Retirada']);
   const [selectedPedido, setSelectedPedido] = useState<Pedido | null>(null);
+  const [isEditing, setIsEditing] = useState(false);
+  const [editData, setEditData] = useState({
+    data_agendamento: '',
+    horario_agendamento: '',
+    observacoes: ''
+  });
+  const [saveLoading, setSaveLoading] = useState(false);
 
   const loadPedidos = useCallback(async () => {
     try {
@@ -65,6 +72,44 @@ export function Dashboard() {
         ? prev.filter(s => s !== status)
         : [...prev, status]
     );
+  };
+
+  const openEditMode = (pedido: Pedido) => {
+    setEditData({
+      data_agendamento: pedido.data_agendamento,
+      horario_agendamento: pedido.horario_agendamento,
+      observacoes: pedido.observacoes || ''
+    });
+    setIsEditing(true);
+  };
+
+  const closeEditMode = () => {
+    setIsEditing(false);
+    setEditData({
+      data_agendamento: '',
+      horario_agendamento: '',
+      observacoes: ''
+    });
+  };
+
+  const saveEdit = async () => {
+    if (!selectedPedido) return;
+    
+    try {
+      setSaveLoading(true);
+      await api.updatePedido(selectedPedido.id, editData);
+      await loadPedidos();
+      // Atualiza o pedido selecionado
+      const updatedPedido = { ...selectedPedido, ...editData };
+      setSelectedPedido(updatedPedido);
+      closeEditMode();
+      alert('Pedido atualizado com sucesso!');
+    } catch (error) {
+      console.error('Erro ao atualizar pedido:', error);
+      alert('Erro ao atualizar pedido');
+    } finally {
+      setSaveLoading(false);
+    }
   };
 
   const statusColors: Record<string, string> = {
@@ -259,12 +304,44 @@ export function Dashboard() {
                   <h2 className="text-2xl font-bold text-white">Pedido #{selectedPedido.numero_pedido}</h2>
                   <p className="text-zinc-400">{selectedPedido.nome_cliente}</p>
                 </div>
-                <button
-                  onClick={() => setSelectedPedido(null)}
-                  className="text-zinc-400 hover:text-white transition"
-                >
-                  <X size={24} />
-                </button>
+                <div className="flex items-center gap-3">
+                  {!isEditing ? (
+                    <button
+                      onClick={() => openEditMode(selectedPedido)}
+                      className="px-4 py-2 bg-blue-700 hover:bg-blue-600 text-white rounded-lg transition flex items-center gap-2"
+                    >
+                      <Edit2 size={18} />
+                      Editar
+                    </button>
+                  ) : (
+                    <>
+                      <button
+                        onClick={saveEdit}
+                        disabled={saveLoading}
+                        className="px-4 py-2 bg-emerald-700 hover:bg-emerald-600 disabled:bg-zinc-700 text-white rounded-lg transition flex items-center gap-2"
+                      >
+                        <Save size={18} />
+                        {saveLoading ? 'Salvando...' : 'Salvar'}
+                      </button>
+                      <button
+                        onClick={closeEditMode}
+                        disabled={saveLoading}
+                        className="px-4 py-2 bg-zinc-700 hover:bg-zinc-600 disabled:bg-zinc-800 text-white rounded-lg transition"
+                      >
+                        Cancelar
+                      </button>
+                    </>
+                  )}
+                  <button
+                    onClick={() => {
+                      setSelectedPedido(null);
+                      closeEditMode();
+                    }}
+                    className="text-zinc-400 hover:text-white transition"
+                  >
+                    <X size={24} />
+                  </button>
+                </div>
               </div>
 
               {/* Conteúdo do Modal */}
@@ -283,11 +360,29 @@ export function Dashboard() {
                   </div>
                   <div>
                     <p className="text-sm text-zinc-500">Data Agendada</p>
-                    <p className="text-white font-medium">{selectedPedido.data_agendamento.split('-').reverse().join('/')}</p>
+                    {isEditing ? (
+                      <input
+                        type="date"
+                        value={editData.data_agendamento}
+                        onChange={(e) => setEditData({ ...editData, data_agendamento: e.target.value })}
+                        className="mt-1 bg-zinc-800 border border-zinc-700 text-white rounded-lg px-3 py-2 focus:outline-none focus:border-blue-500"
+                      />
+                    ) : (
+                      <p className="text-white font-medium">{selectedPedido.data_agendamento.split('-').reverse().join('/')}</p>
+                    )}
                   </div>
                   <div>
                     <p className="text-sm text-zinc-500">Horário</p>
-                    <p className="text-white font-medium">{selectedPedido.horario_agendamento}</p>
+                    {isEditing ? (
+                      <input
+                        type="time"
+                        value={editData.horario_agendamento}
+                        onChange={(e) => setEditData({ ...editData, horario_agendamento: e.target.value })}
+                        className="mt-1 bg-zinc-800 border border-zinc-700 text-white rounded-lg px-3 py-2 focus:outline-none focus:border-blue-500"
+                      />
+                    ) : (
+                      <p className="text-white font-medium">{selectedPedido.horario_agendamento}</p>
+                    )}
                   </div>
                   {selectedPedido.telefone_cliente && (
                     <div>
@@ -310,12 +405,21 @@ export function Dashboard() {
                 )}
 
                 {/* Observações */}
-                {selectedPedido.observacoes && (
-                  <div>
-                    <p className="text-sm text-zinc-500 mb-1">Observações</p>
+                <div>
+                  <p className="text-sm text-zinc-500 mb-1">Observações</p>
+                  {isEditing ? (
+                    <textarea
+                      value={editData.observacoes}
+                      onChange={(e) => setEditData({ ...editData, observacoes: e.target.value })}
+                      className="w-full bg-zinc-800 border border-zinc-700 text-white rounded-lg p-3 focus:outline-none focus:border-blue-500 min-h-[100px]"
+                      placeholder="Adicione observações sobre o pedido..."
+                    />
+                  ) : selectedPedido.observacoes ? (
                     <p className="text-white bg-zinc-800 p-3 rounded-lg">{selectedPedido.observacoes}</p>
-                  </div>
-                )}
+                  ) : (
+                    <p className="text-zinc-500 bg-zinc-800 p-3 rounded-lg italic">Sem observações</p>
+                  )}
+                </div>
 
                 {/* Itens do Pedido */}
                 <div>
