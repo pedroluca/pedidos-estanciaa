@@ -391,8 +391,8 @@ class PollingController {
     private function mapStatus($apiStatus) {
         $statusMap = [
             'waiting_confirmation' => 'Aguardando',
-            'pending_payment' => 'Aguardando',
-            'pending_online_payment' => 'Aguardando',
+            'pending_payment' => 'Pagamento Pendente',
+            'pending_online_payment' => 'Pagamento Online Pendente',
             'scheduled_confirmed' => 'Agendado',
             'confirmed' => 'Em Produção',
             'ready' => 'Em Produção',

@@ -83,7 +83,7 @@ class ProducaoController {
                     p.valor_total
                 FROM pedidos p
                 WHERE p.data_agendamento = ?
-                AND p.status NOT IN ('Cancelado', 'Finalizado')
+                AND p.status IN ('Agendado', 'Em Produção')
                 ORDER BY p.horario_agendamento ASC
             ";
 
