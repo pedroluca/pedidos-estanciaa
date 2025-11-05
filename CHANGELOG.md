@@ -1,5 +1,50 @@
 # Alterações Implementadas - Sistema de Pedidos
 
+## ✅ [05/11/2025 - v1.3] Atualização de Data ao Confirmar Agendamento
+
+### 🐛 Problema Descoberto:
+**Fluxo problemático**:
+1. Cliente cria pedido no catálogo → Status: `pending_payment`
+2. Sistema salva `data_agendamento` = data de criação
+3. Funcionário aceita pedido → Status muda para `scheduled_confirmed`
+4. Polling atualiza status mas **não atualiza a data** ❌
+5. Pedido fica com data de criação ao invés da data agendada
+
+**Exemplo Real**:
+```
+Criado em: 05/11/2025 às 10:00
+Agendado para: 10/11/2025 às 16:00
+Banco tinha: 05/11/2025 10:00 ❌
+```
+
+### ✨ Solução:
+Modificado método `updateOrder()` em `PollingController.php`:
+
+**Lógica implementada**:
+- Quando status muda para `scheduled_confirmed`
+- E pedido **não** foi editado manualmente (`editado_manualmente = 0`)
+- Extrai `schedule.scheduled_date_time_start` da API
+- Atualiza `data_agendamento` e `horario_agendamento` no banco
+
+**Proteções**:
+- ✅ Respeita edição manual (não sobrescreve se `editado_manualmente = 1`)
+- ✅ Específico para `scheduled_confirmed` (outros status não alteram data)
+- ✅ Verifica existência do campo `schedule` antes de atualizar
+
+### Arquivos Modificados:
+- `api/controllers/PollingController.php`
+  - Método `updateOrder()` - Adiciona atualização condicional de data/horário
+
+### Resultado:
+- ✅ Data de agendamento atualizada automaticamente quando pedido é confirmado
+- ✅ Edições manuais continuam protegidas
+- ✅ Apenas status `scheduled_confirmed` dispara atualização de data
+
+### Documentação:
+📄 `FIX-SCHEDULE-DATE.md` - Atualizado com v1.3
+
+---
+
 ## ✅ [05/11/2025 - v1.2] Filtro de Itens Cancelados
 
 ### 🐛 Problema Descoberto:

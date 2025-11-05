@@ -367,20 +367,57 @@ class PollingController {
     }
 
     private function updateOrder($pedidoId, $order) {
-        $stmt = $this->db->prepare('
-            UPDATE pedidos SET 
-                status = ?,
-                observacoes = ?,
-                valor_total = ?,
-                data_atualizacao = NOW()
-            WHERE id = ?
-        ');
-
-        $status = $this->mapStatus($order['status'] ?? 'pending');
+        // Verifica se o pedido foi editado manualmente
+        $stmt = $this->db->prepare('SELECT editado_manualmente FROM pedidos WHERE id = ?');
+        $stmt->execute([$pedidoId]);
+        $pedidoData = $stmt->fetch(PDO::FETCH_ASSOC);
+        $editadoManualmente = $pedidoData['editado_manualmente'] ?? 0;
+        
+        $apiStatus = $order['status'] ?? 'pending';
+        $status = $this->mapStatus($apiStatus);
         $observacoes = $order['observation'] ?? '';
         $valorTotal = $order['total'] ?? 0;
-
-        $stmt->execute([$status, $observacoes, $valorTotal, $pedidoId]);
+        
+        // Se o status mudou para scheduled_confirmed E não foi editado manualmente,
+        // atualiza a data/horário com os dados do schedule
+        $shouldUpdateSchedule = false;
+        $dataAgendamento = null;
+        $horarioAgendamento = null;
+        
+        if ($apiStatus === 'scheduled_confirmed' && $editadoManualmente == 0) {
+            $schedule = $order['schedule'] ?? null;
+            if ($schedule && isset($schedule['scheduled_date_time_start'])) {
+                $shouldUpdateSchedule = true;
+                $dateTime = new DateTime($schedule['scheduled_date_time_start']);
+                $dataAgendamento = $dateTime->format('Y-m-d');
+                $horarioAgendamento = $dateTime->format('H:i:s');
+            }
+        }
+        
+        // Monta a query baseado se deve atualizar o schedule ou não
+        if ($shouldUpdateSchedule) {
+            $stmt = $this->db->prepare('
+                UPDATE pedidos SET 
+                    status = ?,
+                    data_agendamento = ?,
+                    horario_agendamento = ?,
+                    observacoes = ?,
+                    valor_total = ?,
+                    data_atualizacao = NOW()
+                WHERE id = ?
+            ');
+            $stmt->execute([$status, $dataAgendamento, $horarioAgendamento, $observacoes, $valorTotal, $pedidoId]);
+        } else {
+            $stmt = $this->db->prepare('
+                UPDATE pedidos SET 
+                    status = ?,
+                    observacoes = ?,
+                    valor_total = ?,
+                    data_atualizacao = NOW()
+                WHERE id = ?
+            ');
+            $stmt->execute([$status, $observacoes, $valorTotal, $pedidoId]);
+        }
 
         // Remove itens antigos e reinsere
         $stmt = $this->db->prepare('DELETE FROM pedidos_itens WHERE pedido_id = ?');
