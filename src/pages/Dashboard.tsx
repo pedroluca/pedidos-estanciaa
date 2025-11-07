@@ -11,7 +11,8 @@ export function Dashboard() {
   const [pedidos, setPedidos] = useState<Pedido[]>([]);
   const [loading, setLoading] = useState(true);
   const [syncLoading, setSyncLoading] = useState(false);
-  const [filter, setFilter] = useState<'todos' | 'hoje' | 'futuro'>('hoje');
+  const [filter, setFilter] = useState<'todos' | 'hoje' | 'futuro' | 'data'>('hoje');
+  const [dataEspecifica, setDataEspecifica] = useState<string>('');
   const [statusFilter, setStatusFilter] = useState<string[]>(['Aguardando', 'Em Produção', 'Agendado', 'Saiu para Entrega', 'Esperando Retirada']);
   const [selectedPedido, setSelectedPedido] = useState<Pedido | null>(null);
   const [isEditing, setIsEditing] = useState(false);
@@ -61,6 +62,7 @@ export function Dashboard() {
     .filter(p => {
       if (filter === 'hoje') return p.data_agendamento === hoje;
       if (filter === 'futuro') return p.data_agendamento > hoje;
+      if (filter === 'data' && dataEspecifica) return p.data_agendamento === dataEspecifica;
       return true;
     })
     .filter(p => statusFilter.includes(p.status));
@@ -162,9 +164,12 @@ export function Dashboard() {
       <main className="max-w-7xl mx-auto px-6 py-8">
         {/* Ações */}
         <div className="flex items-center justify-between mb-4">
-          <div className="flex gap-2">
+          <div className="flex gap-2 items-center">
             <button
-              onClick={() => setFilter('todos')}
+              onClick={() => {
+                setFilter('todos');
+                setDataEspecifica('');
+              }}
               className={`px-4 py-2 rounded-lg transition ${
                 filter === 'todos' ? 'bg-emerald-700 text-white' : 'bg-zinc-800 text-zinc-300 hover:bg-zinc-700'
               }`}
@@ -172,7 +177,10 @@ export function Dashboard() {
               Todos
             </button>
             <button
-              onClick={() => setFilter('hoje')}
+              onClick={() => {
+                setFilter('hoje');
+                setDataEspecifica('');
+              }}
               className={`px-4 py-2 rounded-lg transition ${
                 filter === 'hoje' ? 'bg-emerald-700 text-white' : 'bg-zinc-800 text-zinc-300 hover:bg-zinc-700'
               }`}
@@ -180,13 +188,37 @@ export function Dashboard() {
               Hoje
             </button>
             <button
-              onClick={() => setFilter('futuro')}
+              onClick={() => {
+                setFilter('futuro');
+                setDataEspecifica('');
+              }}
               className={`px-4 py-2 rounded-lg transition ${
                 filter === 'futuro' ? 'bg-emerald-700 text-white' : 'bg-zinc-800 text-zinc-300 hover:bg-zinc-700'
               }`}
             >
               Futuros
             </button>
+            <button
+              onClick={() => {
+                setFilter('data');
+                if (!dataEspecifica) {
+                  setDataEspecifica(new Date().toISOString().split('T')[0]);
+                }
+              }}
+              className={`px-4 py-2 rounded-lg transition ${
+                filter === 'data' ? 'bg-emerald-700 text-white' : 'bg-zinc-800 text-zinc-300 hover:bg-zinc-700'
+              }`}
+            >
+              Data Específica
+            </button>
+            {filter === 'data' && (
+              <input
+                type="date"
+                value={dataEspecifica}
+                onChange={(e) => setDataEspecifica(e.target.value)}
+                className="bg-zinc-800 border border-zinc-700 text-white rounded-lg px-3 py-2 focus:outline-none focus:border-emerald-500"
+              />
+            )}
           </div>
 
           <div className="flex gap-2">
