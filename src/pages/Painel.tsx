@@ -1,73 +1,75 @@
-import { useState, useEffect } from 'react';
-import { Maximize2, Minimize2 } from 'lucide-react';
-import { useOrderPolling } from '../hooks/useOrderPolling';
-import { api } from '../lib/api';
-import type { Pedido } from '../types';
+import { useState, useEffect } from 'react'
+import { ArrowLeft, Maximize2, Minimize2 } from 'lucide-react'
+import { useOrderPolling } from '../hooks/useOrderPolling'
+import { api } from '../lib/api'
+import type { Pedido } from '../types'
+import { useNavigate } from 'react-router-dom'
 
 export function Painel() {
-  const [pedidos, setPedidos] = useState<Pedido[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [isFullscreen, setIsFullscreen] = useState(false);
-  const [selectedPedido, setSelectedPedido] = useState<Pedido | null>(null);
-  const [zoomedImage, setZoomedImage] = useState<string | null>(null);
-  const [dataSelecionada, setDataSelecionada] = useState<string>(new Date().toISOString().split('T')[0]);
-  const [isEditingDate, setIsEditingDate] = useState(false);
-  const [tempDate, setTempDate] = useState<string>(new Date().toISOString().split('T')[0]);
+  const [pedidos, setPedidos] = useState<Pedido[]>([])
+  const [loading, setLoading] = useState(true)
+  const [isFullscreen, setIsFullscreen] = useState(false)
+  const [selectedPedido, setSelectedPedido] = useState<Pedido | null>(null)
+  const [zoomedImage, setZoomedImage] = useState<string | null>(null)
+  const [dataSelecionada, setDataSelecionada] = useState<string>(new Date().toISOString().split('T')[0])
+  const [isEditingDate, setIsEditingDate] = useState(false)
+  const [tempDate, setTempDate] = useState<string>(new Date().toISOString().split('T')[0])
+  const navigate = useNavigate()
 
   const loadPedidos = async () => {
     try {
-      setLoading(true);
-      const data = await api.getPainelProducao(dataSelecionada);
-      setPedidos(data);
+      setLoading(true)
+      const data = await api.getPainelProducao(dataSelecionada)
+      setPedidos(data)
     } catch (error) {
-      console.error('Erro ao carregar pedidos:', error);
+      console.error('Erro ao carregar pedidos:', error)
     } finally {
-      setLoading(false);
+      setLoading(false)
     }
-  };
+  }
 
   const handleToggleFeito = async (pedidoId: number) => {
     try {
-      await api.togglePedidoFeito(pedidoId);
+      await api.togglePedidoFeito(pedidoId)
       // Recarrega os pedidos após atualizar
-      await loadPedidos();
+      await loadPedidos()
     } catch (error) {
-      console.error('Erro ao atualizar status de produção:', error);
+      console.error('Erro ao atualizar status de produção:', error)
     }
-  };
+  }
 
   // Ativa o polling automático a cada 1 minuto
-  useOrderPolling(loadPedidos);
+  useOrderPolling(loadPedidos)
 
   useEffect(() => {
-    loadPedidos();
+    loadPedidos()
     // Só ativa o intervalo se não estiver editando a data
     if (!isEditingDate) {
-      const interval = setInterval(loadPedidos, 30000); // Atualiza a cada 30 segundos
-      return () => clearInterval(interval);
+      const interval = setInterval(loadPedidos, 30000) // Atualiza a cada 30 segundos
+      return () => clearInterval(interval)
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [dataSelecionada, isEditingDate]);
+  }, [dataSelecionada, isEditingDate])
 
   const handleFullscreen = () => {
     if (!isFullscreen) {
-      document.documentElement.requestFullscreen();
+      document.documentElement.requestFullscreen()
     } else {
-      document.exitFullscreen();
+      document.exitFullscreen()
     }
-    setIsFullscreen((v) => !v);
-  };
+    setIsFullscreen((v) => !v)
+  }
 
   // Separa pedidos por período
   const manha = pedidos.filter(p => {
-    const [hora] = p.horario_agendamento.split(':');
-    return parseInt(hora) < 12;
-  });
+    const [hora] = p.horario_agendamento.split(':')
+    return parseInt(hora) < 12
+  })
 
   const tarde = pedidos.filter(p => {
-    const [hora] = p.horario_agendamento.split(':');
-    return parseInt(hora) >= 12;
-  });
+    const [hora] = p.horario_agendamento.split(':')
+    return parseInt(hora) >= 12
+  })
 
   const statusColors: Record<string, string> = {
     "Em Produção": "bg-orange-500",
@@ -77,14 +79,14 @@ export function Painel() {
     "Cancelado": "bg-red-700",
     "Saiu para Entrega": "bg-yellow-600",
     "Esperando Retirada": "bg-lime-600",
-  };
+  }
 
   if (loading && pedidos.length === 0) {
     return (
       <div className="min-h-screen bg-[#111] flex items-center justify-center">
         <div className="text-white text-xl">Carregando pedidos...</div>
       </div>
-    );
+    )
   }
 
   return (
@@ -103,28 +105,40 @@ export function Painel() {
         <h1 className="text-3xl font-semibold text-center sm:text-left">
           Floricultura Estância-A - Painel de Produção
         </h1>
+
+        <div className="flex items-center gap-4">
+          {/* Botão de Voltar */}
+          <button
+            onClick={() => navigate('/dashboard')}
+            className="bg-[#222] hover:bg-[#333] flex items-center gap-2 hover:cursor-pointer border border-gray-700 rounded-lg px-4 py-2 shadow-lg transition-colors"
+          >
+            <ArrowLeft />
+            Voltar
+          </button>
+          
+          {/* Seletor de Data */}
+          <div className="flex items-center gap-3 bg-[#1e1e1e] border border-gray-700 rounded-lg px-4 py-2 min-w-[200px]">
+            <input
+              type="date"
+              value={isEditingDate ? tempDate : dataSelecionada}
+              onChange={(e) => setTempDate(e.target.value)}
+              onFocus={() => {
+                setIsEditingDate(true)
+                setTempDate(dataSelecionada)
+              }}
+              onBlur={() => {
+                setIsEditingDate(false)
+                if (tempDate && tempDate.length === 10) {
+                  setDataSelecionada(tempDate)
+                }
+              }}
+              className="bg-transparent text-white outline-none cursor-pointer w-full"
+              style={{
+                colorScheme: 'dark'
+              }}
+            />
+          </div>
         
-        {/* Seletor de Data */}
-        <div className="flex items-center gap-3 bg-[#1e1e1e] border border-gray-700 rounded-lg px-4 py-2 min-w-[200px]">
-          <input
-            type="date"
-            value={isEditingDate ? tempDate : dataSelecionada}
-            onChange={(e) => setTempDate(e.target.value)}
-            onFocus={() => {
-              setIsEditingDate(true);
-              setTempDate(dataSelecionada);
-            }}
-            onBlur={() => {
-              setIsEditingDate(false);
-              if (tempDate && tempDate.length === 10) {
-                setDataSelecionada(tempDate);
-              }
-            }}
-            className="bg-transparent text-white outline-none cursor-pointer w-full"
-            style={{
-              colorScheme: 'dark'
-            }}
-          />
         </div>
       </div>
 
@@ -297,8 +311,8 @@ export function Painel() {
                       src={item.imagem || 'https://placehold.co/200x200?text=Sem+Imagem'}
                       alt={item.nome}
                       onClick={(e) => {
-                        e.stopPropagation();
-                        setZoomedImage(item.imagem || 'https://placehold.co/200x200?text=Sem+Imagem');
+                        e.stopPropagation()
+                        setZoomedImage(item.imagem || 'https://placehold.co/200x200?text=Sem+Imagem')
                       }}
                       className="w-48 h-48 object-cover rounded-xl shrink-0 cursor-pointer hover:opacity-80 transition-opacity"
                     />
@@ -327,8 +341,8 @@ export function Painel() {
             <div className="mt-6 flex gap-4">
               <button
                 onClick={() => {
-                  handleToggleFeito(selectedPedido.id);
-                  setSelectedPedido(null);
+                  handleToggleFeito(selectedPedido.id)
+                  setSelectedPedido(null)
                 }}
                 className={`flex-1 py-3 rounded-lg font-semibold text-lg transition-colors ${
                   selectedPedido.is_feito
@@ -376,5 +390,5 @@ export function Painel() {
         </div>
       )}
     </div>
-  );
+  )
 }
