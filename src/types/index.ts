@@ -50,13 +50,14 @@ export interface Pedido {
   data_criacao: string;
   data_agendamento: string;
   horario_agendamento: string;
-  status: 'Aguardando' | 'Em Produção' | 'Agendado' | 'Saiu para Entrega' | 'Esperando Retirada' | 'Finalizado';
+  status: 'Aguardando' | 'Em Produção' | 'Agendado' | 'Saiu para Entrega' | 'Esperando Retirada' | 'Finalizado' | 'Cancelado';
   tipo_entrega: 'DELIVERY' | 'RETIRADA';
   endereco_entrega: string | null;
   observacoes: string | null;
   valor_total: number;
   is_feito: boolean;
   editado_manualmente: boolean;
+  status_editado_manualmente: boolean;
   itens: ItemPedido[];
 }
 

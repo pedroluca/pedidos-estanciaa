@@ -169,6 +169,8 @@ class PedidosController {
             // Monta a query dinamicamente baseado nos campos fornecidos
             $fields = [];
             $params = [];
+            $editouDataHorario = false;
+            $editouStatus = false;
 
             if (isset($data['nome_cliente'])) {
                 $fields[] = 'nome_cliente = ?';
@@ -181,14 +183,17 @@ class PedidosController {
             if (isset($data['data_agendamento'])) {
                 $fields[] = 'data_agendamento = ?';
                 $params[] = $data['data_agendamento'];
+                $editouDataHorario = true;
             }
             if (isset($data['horario_agendamento'])) {
                 $fields[] = 'horario_agendamento = ?';
                 $params[] = $data['horario_agendamento'];
+                $editouDataHorario = true;
             }
             if (isset($data['status'])) {
                 $fields[] = 'status = ?';
                 $params[] = $data['status'];
+                $editouStatus = true;
             }
             if (isset($data['tipo_entrega'])) {
                 $fields[] = 'tipo_entrega = ?';
@@ -204,7 +209,12 @@ class PedidosController {
             }
 
             // Marca como editado manualmente para proteger do polling
-            $fields[] = 'editado_manualmente = 1';
+            if ($editouDataHorario) {
+                $fields[] = 'editado_manualmente = 1';
+            }
+            if ($editouStatus) {
+                $fields[] = 'status_editado_manualmente = 1';
+            }
             $fields[] = 'data_atualizacao = NOW()';
             $params[] = $id;
 

@@ -116,4 +116,72 @@ class ProducaoController {
             Response::error('Erro ao buscar pedidos: ' . $e->getMessage(), 500);
         }
     }
+
+    /**
+     * Obtém a contabilização de produtos por data
+     * Agrupa os itens por nome e soma as quantidades
+     * GET /api/producao/contabilizacao?data=2025-11-05&status=Finalizado
+     */
+    public function getContabilizacao() {
+        // Verifica autenticação
+        Auth::authenticate();
+
+        // Pega a data da query string (se não informada, usa hoje)
+        $data = isset($_GET['data']) ? $_GET['data'] : date('Y-m-d');
+        
+        // Pega os status da query string (padrão: todos exceto cancelado)
+        $statusFiltro = isset($_GET['status']) ? $_GET['status'] : null;
+
+        try {
+            $query = "
+                SELECT 
+                    i.nome as produto,
+                    i.imagem,
+                    SUM(pi.quantidade) as quantidade_total,
+                    COUNT(DISTINCT p.id) as total_pedidos
+                FROM pedidos p
+                JOIN pedidos_itens pi ON p.id = pi.pedido_id
+                JOIN itens i ON pi.item_id = i.id
+                WHERE p.data_agendamento = ?
+            ";
+            
+            $params = [$data];
+            
+            // Adiciona filtro de status se fornecido
+            if ($statusFiltro) {
+                // Se for múltiplos status separados por vírgula
+                $statusArray = explode(',', $statusFiltro);
+                $placeholders = implode(',', array_fill(0, count($statusArray), '?'));
+                $query .= " AND p.status IN ($placeholders)";
+                $params = array_merge($params, $statusArray);
+            } else {
+                // Padrão: exclui apenas cancelados
+                $query .= " AND p.status NOT IN ('Cancelado')";
+            }
+            
+            $query .= "
+                GROUP BY i.id, i.nome, i.imagem
+                ORDER BY quantidade_total DESC, i.nome ASC
+            ";
+
+            $stmt = $this->db->prepare($query);
+            $stmt->execute($params);
+            $produtos = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+            // Converte quantidade_total para número inteiro
+            foreach ($produtos as &$produto) {
+                $produto['quantidade_total'] = (int)$produto['quantidade_total'];
+                $produto['total_pedidos'] = (int)$produto['total_pedidos'];
+            }
+
+            Response::json([
+                'data' => $data,
+                'total_produtos' => count($produtos),
+                'produtos' => $produtos
+            ]);
+
+        } catch (PDOException $e) {
+            Response::error('Erro ao buscar contabilização: ' . $e->getMessage(), 500);
+        }
+    }
 }

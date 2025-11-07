@@ -150,6 +150,15 @@ class ApiClient {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     return this.request<any[]>(`/producao/painel${query}`);
   }
+
+  async getContabilizacao(data?: string, status?: string) {
+    const params = new URLSearchParams();
+    if (data) params.append('data', data);
+    if (status) params.append('status', status);
+    const query = params.toString();
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    return this.request<any>(`/producao/contabilizacao${query ? `?${query}` : ''}`);
+  }
 }
 
 export const api = new ApiClient();

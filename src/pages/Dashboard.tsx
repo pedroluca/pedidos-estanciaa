@@ -18,6 +18,7 @@ export function Dashboard() {
   const [editData, setEditData] = useState({
     data_agendamento: '',
     horario_agendamento: '',
+    status: '',
     observacoes: ''
   });
   const [saveLoading, setSaveLoading] = useState(false);
@@ -78,6 +79,7 @@ export function Dashboard() {
     setEditData({
       data_agendamento: pedido.data_agendamento,
       horario_agendamento: pedido.horario_agendamento,
+      status: pedido.status,
       observacoes: pedido.observacoes || ''
     });
     setIsEditing(true);
@@ -88,6 +90,7 @@ export function Dashboard() {
     setEditData({
       data_agendamento: '',
       horario_agendamento: '',
+      status: '',
       observacoes: ''
     });
   };
@@ -100,7 +103,7 @@ export function Dashboard() {
       await api.updatePedido(selectedPedido.id, editData);
       await loadPedidos();
       // Atualiza o pedido selecionado
-      const updatedPedido = { ...selectedPedido, ...editData };
+      const updatedPedido = { ...selectedPedido, ...editData } as Pedido;
       setSelectedPedido(updatedPedido);
       closeEditMode();
       alert('Pedido atualizado com sucesso!');
@@ -137,6 +140,12 @@ export function Dashboard() {
               className="px-4 py-2 bg-emerald-700 hover:bg-emerald-600 text-white rounded-lg transition"
             >
               Ver Painel
+            </Link>
+            <Link
+              to="/dashboard/contabilizacao"
+              className="px-4 py-2 bg-purple-700 hover:bg-purple-600 text-white rounded-lg transition"
+            >
+              Contabilização
             </Link>
             <button
               onClick={logout}
@@ -351,9 +360,23 @@ export function Dashboard() {
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <p className="text-sm text-zinc-500">Status</p>
-                    <span className={`inline-block mt-1 ${statusColors[selectedPedido.status] || 'bg-gray-600'} text-white text-sm px-3 py-1 rounded`}>
-                      {selectedPedido.status}
-                    </span>
+                    {isEditing ? (
+                      <select
+                        value={editData.status}
+                        onChange={(e) => setEditData({ ...editData, status: e.target.value })}
+                        className="mt-1 w-full bg-zinc-800 border border-zinc-700 text-white rounded-lg px-3 py-2 focus:outline-none focus:border-blue-500"
+                      >
+                        {todosStatus.map((status) => (
+                          <option key={status} value={status}>
+                            {status}
+                          </option>
+                        ))}
+                      </select>
+                    ) : (
+                      <span className={`inline-block mt-1 ${statusColors[selectedPedido.status] || 'bg-gray-600'} text-white text-sm px-3 py-1 rounded`}>
+                        {selectedPedido.status}
+                      </span>
+                    )}
                   </div>
                   <div>
                     <p className="text-sm text-zinc-500">Tipo de Entrega</p>

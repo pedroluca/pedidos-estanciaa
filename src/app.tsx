@@ -5,6 +5,7 @@ import { Login } from './pages/Login';
 import { Dashboard } from './pages/Dashboard';
 import { Painel } from './pages/Painel';
 import { NovoPedido } from './pages/NovoPedido';
+import { Contabilizacao } from './pages/Contabilizacao';
 
 function App() {
   return (
@@ -26,6 +27,14 @@ function App() {
             element={
               <ProtectedRoute>
                 <NovoPedido />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/dashboard/contabilizacao"
+            element={
+              <ProtectedRoute>
+                <Contabilizacao />
               </ProtectedRoute>
             }
           />

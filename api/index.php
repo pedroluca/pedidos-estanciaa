@@ -144,5 +144,10 @@ if ($uri === '/producao/painel' && $requestMethod === 'GET') {
     $controller->getPainelProducao();
 }
 
+if ($uri === '/producao/contabilizacao' && $requestMethod === 'GET') {
+    $controller = new ProducaoController();
+    $controller->getContabilizacao();
+}
+
 // Rota não encontrada
 Response::error('Rota não encontrada', 404);
