@@ -159,6 +159,39 @@ class ApiClient {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     return this.request<any>(`/producao/contabilizacao${query ? `?${query}` : ''}`);
   }
+
+  // Estoque de Perecíveis
+  async getEstoque(filtro?: string, dataInicio?: string, dataFim?: string) {
+    const params = new URLSearchParams();
+    if (filtro) params.append('filtro', filtro);
+    if (dataInicio) params.append('data_inicio', dataInicio);
+    if (dataFim) params.append('data_fim', dataFim);
+    const query = params.toString();
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    return this.request<any[]>(`/estoque${query ? `?${query}` : ''}`);
+  }
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  async createEstoque(data: any) {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    return this.request<any>('/estoque', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  }
+
+  async abaterQuantidadeEstoque(id: number, quantidade: number) {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    return this.request<any>(`/estoque/${id}/abater`, {
+      method: 'PUT',
+      body: JSON.stringify({ quantidade }),
+    });
+  }
+
+  async deleteEstoque(id: number) {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    return this.request<any>(`/estoque/${id}`, { method: 'DELETE' });
+  }
 }
 
 export const api = new ApiClient();

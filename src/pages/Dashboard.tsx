@@ -149,6 +149,12 @@ export function Dashboard() {
             >
               Contabilização
             </Link>
+            <Link
+              to="/dashboard/estoque"
+              className="px-4 py-2 bg-blue-700 hover:bg-blue-600 text-white rounded-lg transition"
+            >
+              Estoque
+            </Link>
             <button
               onClick={logout}
               className="px-4 py-2 bg-zinc-800 hover:bg-zinc-700 text-white rounded-lg transition flex items-center gap-2"
