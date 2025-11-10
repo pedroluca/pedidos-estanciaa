@@ -37,6 +37,7 @@ class EstoqueController {
             // Aplica filtros de data de validade
             switch ($filtro) {
                 case '7dias':
+                    // Próximos 7 dias a partir de hoje
                     $dataLimite = date('Y-m-d', strtotime('+7 days'));
                     $query .= " AND ep.data_validade BETWEEN ? AND ?";
                     $params[] = $hoje;
@@ -44,20 +45,24 @@ class EstoqueController {
                     break;
 
                 case 'semana':
-                    $dataLimite = date('Y-m-d', strtotime('+1 week'));
+                    // Produtos que vencem até o final da semana atual (sábado)
+                    // Domingo é considerado o início da próxima semana
+                    $fimSemana = date('Y-m-d', strtotime('saturday this week'));
                     $query .= " AND ep.data_validade BETWEEN ? AND ?";
                     $params[] = $hoje;
-                    $params[] = $dataLimite;
+                    $params[] = $fimSemana;
                     break;
 
                 case 'mes':
-                    $dataLimite = date('Y-m-d', strtotime('+1 month'));
+                    // Produtos que vencem até o final do mês ATUAL (calendário)
+                    $fimMesAtual = date('Y-m-t'); // último dia do mês atual
                     $query .= " AND ep.data_validade BETWEEN ? AND ?";
                     $params[] = $hoje;
-                    $params[] = $dataLimite;
+                    $params[] = $fimMesAtual;
                     break;
 
                 case 'mes_proximo':
+                    // Produtos que vencem no mês QUE VEM (calendário)
                     $inicioMesProximo = date('Y-m-d', strtotime('first day of next month'));
                     $fimMesProximo = date('Y-m-d', strtotime('last day of next month'));
                     $query .= " AND ep.data_validade BETWEEN ? AND ?";

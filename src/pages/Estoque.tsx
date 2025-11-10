@@ -1,6 +1,7 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { ArrowLeft, Plus, Package, AlertTriangle, Minus, Trash2, X } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import toast, { Toaster } from 'react-hot-toast';
 import { api } from '../lib/api';
 
 interface ProdutoEstoque {
@@ -18,15 +19,20 @@ interface ProdutoEstoque {
 export function Estoque() {
   const [produtos, setProdutos] = useState<ProdutoEstoque[]>([]);
   const [loading, setLoading] = useState(true);
-  const [filtro, setFiltro] = useState<string>('7dias');
+  const [filtro, setFiltro] = useState<string>('semana');
   const [dataInicio, setDataInicio] = useState<string>('');
   const [dataFim, setDataFim] = useState<string>('');
-  const [showModal, setShowModal] = useState(false);
-  const [showAbaterModal, setShowAbaterModal] = useState(false);
+  const [showAddModal, setShowAddModal] = useState(false);
+  const [showAbateModal, setShowAbateModal] = useState(false);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [produtoSelecionado, setProdutoSelecionado] = useState<ProdutoEstoque | null>(null);
+  const [produtoParaDeletar, setProdutoParaDeletar] = useState<number | null>(null);
   const [quantidadeAbater, setQuantidadeAbater] = useState<number>(1);
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [itens, setItens] = useState<any[]>([]);
+  const [buscaProduto, setBuscaProduto] = useState('');
+  const [showDropdown, setShowDropdown] = useState(false);
+  const dropdownRef = useRef<HTMLDivElement>(null);
   const navigate = useNavigate();
 
   const [novoProduto, setNovoProduto] = useState({
@@ -71,15 +77,32 @@ export function Estoque() {
     loadItens();
   }, []);
 
+  // Fechar dropdown ao clicar fora
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        setShowDropdown(false);
+      }
+    };
+
+    if (showDropdown) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [showDropdown]);
+
   const handleCreateProduto = async () => {
     if (!novoProduto.nome_produto || !novoProduto.data_validade || novoProduto.quantidade < 1) {
-      alert('Preencha todos os campos obrigatórios');
+      toast.error('Preencha todos os campos obrigatórios');
       return;
     }
 
     try {
       await api.createEstoque(novoProduto);
-      setShowModal(false);
+      setShowAddModal(false);
       setNovoProduto({
         item_id: null,
         nome_produto: '',
@@ -87,11 +110,13 @@ export function Estoque() {
         data_validade: '',
         quantidade: 1
       });
+      setBuscaProduto('');
+      setShowDropdown(false);
       loadProdutos();
-      alert('Produto adicionado ao estoque!');
+      toast.success('Produto adicionado ao estoque!');
     } catch (error) {
       console.error('Erro ao adicionar produto:', error);
-      alert('Erro ao adicionar produto');
+      toast.error('Erro ao adicionar produto');
     }
   };
 
@@ -100,33 +125,40 @@ export function Estoque() {
 
     try {
       const response = await api.abaterQuantidadeEstoque(produtoSelecionado.id, quantidadeAbater);
-      setShowAbaterModal(false);
+      setShowAbateModal(false);
       setProdutoSelecionado(null);
       setQuantidadeAbater(1);
       loadProdutos();
       
       if (response.removed) {
-        alert('Produto removido do estoque (quantidade zerada)');
+        toast.success('Produto removido do estoque (quantidade zerada)');
       } else {
-        alert(`Quantidade abatida! Nova quantidade: ${response.nova_quantidade}`);
+        toast.success(`Quantidade abatida! Nova quantidade: ${response.nova_quantidade}`);
       }
     } catch (error) {
       console.error('Erro ao abater quantidade:', error);
       const errorMessage = error instanceof Error ? error.message : 'Erro ao abater quantidade';
-      alert(errorMessage);
+      toast.error(errorMessage);
     }
   };
 
   const handleDelete = async (id: number) => {
-    if (!confirm('Deseja remover este produto do estoque?')) return;
+    setProdutoParaDeletar(id);
+    setShowDeleteModal(true);
+  };
+
+  const confirmDelete = async () => {
+    if (!produtoParaDeletar) return;
 
     try {
-      await api.deleteEstoque(id);
+      await api.deleteEstoque(produtoParaDeletar);
       loadProdutos();
-      alert('Produto removido do estoque');
+      toast.success('Produto removido do estoque');
+      setShowDeleteModal(false);
+      setProdutoParaDeletar(null);
     } catch (error) {
       console.error('Erro ao remover produto:', error);
-      alert('Erro ao remover produto');
+      toast.error('Erro ao remover produto');
     }
   };
 
@@ -157,6 +189,30 @@ export function Estoque() {
 
   return (
     <div className="min-h-screen bg-zinc-950">
+      <Toaster
+        position="top-right"
+        toastOptions={{
+          duration: 3000,
+          style: {
+            background: '#18181b',
+            color: '#fff',
+            border: '1px solid #27272a',
+          },
+          success: {
+            iconTheme: {
+              primary: '#10b981',
+              secondary: '#fff',
+            },
+          },
+          error: {
+            iconTheme: {
+              primary: '#ef4444',
+              secondary: '#fff',
+            },
+          },
+        }}
+      />
+      
       {/* Header */}
       <header className="bg-zinc-900 border-b border-zinc-800 px-6 py-4">
         <div className="max-w-7xl mx-auto flex items-center justify-between">
@@ -178,7 +234,18 @@ export function Estoque() {
             </div>
           </div>
           <button
-            onClick={() => setShowModal(true)}
+            onClick={() => {
+              setShowAddModal(true);
+              setBuscaProduto('');
+              setShowDropdown(false);
+              setNovoProduto({
+                item_id: null,
+                nome_produto: '',
+                data_compra: new Date().toISOString().split('T')[0],
+                data_validade: '',
+                quantidade: 1
+              });
+            }}
             className="px-4 py-2 bg-emerald-700 hover:bg-emerald-600 text-white rounded-lg transition flex items-center gap-2"
           >
             <Plus size={18} />
@@ -194,20 +261,20 @@ export function Estoque() {
           <h3 className="text-sm font-medium text-zinc-400 mb-3">Filtrar por vencimento:</h3>
           <div className="flex flex-wrap gap-2 items-center">
             <button
-              onClick={() => setFiltro('7dias')}
-              className={`px-4 py-2 rounded-lg text-sm transition ${
-                filtro === '7dias' ? 'bg-emerald-700 text-white' : 'bg-zinc-800 text-zinc-400 hover:bg-zinc-700'
-              }`}
-            >
-              Próximos 7 dias
-            </button>
-            <button
               onClick={() => setFiltro('semana')}
               className={`px-4 py-2 rounded-lg text-sm transition ${
                 filtro === 'semana' ? 'bg-emerald-700 text-white' : 'bg-zinc-800 text-zinc-400 hover:bg-zinc-700'
               }`}
             >
               Esta semana
+            </button>
+            <button
+              onClick={() => setFiltro('7dias')}
+              className={`px-4 py-2 rounded-lg text-sm transition ${
+                filtro === '7dias' ? 'bg-emerald-700 text-white' : 'bg-zinc-800 text-zinc-400 hover:bg-zinc-700'
+              }`}
+            >
+              Próximos 7 dias
             </button>
             <button
               onClick={() => setFiltro('mes')}
@@ -331,7 +398,7 @@ export function Estoque() {
                       onClick={() => {
                         setProdutoSelecionado(produto);
                         setQuantidadeAbater(1);
-                        setShowAbaterModal(true);
+                        setShowAbateModal(true);
                       }}
                       className="flex-1 px-3 py-2 bg-blue-700 hover:bg-blue-600 text-white rounded-lg text-sm transition flex items-center justify-center gap-2"
                     >
@@ -353,13 +420,13 @@ export function Estoque() {
       </main>
 
       {/* Modal Adicionar Produto */}
-      {showModal && (
+      {showAddModal && (
         <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50 p-4">
           <div className="bg-zinc-900 border border-zinc-800 rounded-xl w-full max-w-md">
             <div className="flex items-center justify-between p-6 border-b border-zinc-800">
               <h2 className="text-xl font-bold text-white">Adicionar Produto</h2>
               <button
-                onClick={() => setShowModal(false)}
+                onClick={() => setShowAddModal(false)}
                 className="text-zinc-400 hover:text-white transition"
               >
                 <X size={24} />
@@ -368,39 +435,78 @@ export function Estoque() {
 
             <div className="p-6 space-y-4">
               <div>
-                <label className="block text-sm text-zinc-400 mb-2">Produto do catálogo (opcional)</label>
-                <select
-                  value={novoProduto.item_id || ''}
-                  onChange={(e) => {
-                    const itemId = e.target.value ? parseInt(e.target.value) : null;
-                    const item = itens.find(i => i.id === itemId);
-                    setNovoProduto({
-                      ...novoProduto,
-                      item_id: itemId,
-                      nome_produto: item ? item.nome : novoProduto.nome_produto
-                    });
-                  }}
-                  className="w-full bg-zinc-800 border border-zinc-700 text-white rounded-lg px-4 py-2 focus:outline-none focus:border-emerald-500"
-                >
-                  <option value="">Selecione (ou digite manualmente abaixo)</option>
-                  {itens.map((item) => (
-                    <option key={item.id} value={item.id}>
-                      {item.nome}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div>
-                <label className="block text-sm text-zinc-400 mb-2">Nome do produto *</label>
-                <input
-                  type="text"
-                  value={novoProduto.nome_produto}
-                  onChange={(e) => setNovoProduto({ ...novoProduto, nome_produto: e.target.value })}
-                  className="w-full bg-zinc-800 border border-zinc-700 text-white rounded-lg px-4 py-2 focus:outline-none focus:border-emerald-500"
-                  placeholder="Ex: Morangos frescos"
-                  required
-                />
+                <label className="block text-sm text-zinc-400 mb-2">Produto</label>
+                <div className="relative" ref={dropdownRef}>
+                  <input
+                    type="text"
+                    value={buscaProduto}
+                    onChange={(e) => {
+                      setBuscaProduto(e.target.value);
+                      setShowDropdown(true);
+                    }}
+                    onFocus={() => setShowDropdown(true)}
+                    className="w-full bg-zinc-800 border border-zinc-700 text-white rounded-lg px-4 py-2 focus:outline-none focus:border-emerald-500"
+                    placeholder="Digite para buscar ou criar produto..."
+                  />
+                  
+                  {showDropdown && buscaProduto && (
+                    <div className="absolute z-10 w-full mt-1 bg-zinc-800 border border-zinc-700 rounded-lg max-h-60 overflow-y-auto">
+                      {itens
+                        .filter(item => 
+                          item.nome.toLowerCase().includes(buscaProduto.toLowerCase())
+                        )
+                        .slice(0, 10)
+                        .map((item) => (
+                          <button
+                            key={item.id}
+                            type="button"
+                            onClick={() => {
+                              setNovoProduto({
+                                ...novoProduto,
+                                item_id: item.id,
+                                nome_produto: item.nome
+                              });
+                              setBuscaProduto(item.nome);
+                              setShowDropdown(false);
+                            }}
+                            className="w-full text-left px-4 py-2 hover:bg-zinc-700 text-white transition"
+                          >
+                            {item.nome}
+                          </button>
+                        ))}
+                      
+                      {itens.filter(item => 
+                        item.nome.toLowerCase().includes(buscaProduto.toLowerCase())
+                      ).length === 0 && (
+                        <div className="px-4 py-3 text-zinc-400 text-sm border-t border-zinc-700">
+                          <p className="mb-2">Nenhum produto encontrado no catálogo.</p>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setNovoProduto({
+                                ...novoProduto,
+                                item_id: null,
+                                nome_produto: buscaProduto
+                              });
+                              setShowDropdown(false);
+                            }}
+                            className="w-full bg-emerald-700 hover:bg-emerald-600 text-white px-3 py-2 rounded-lg transition"
+                          >
+                            Criar produto customizado: "{buscaProduto}"
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+                {novoProduto.nome_produto && (
+                  <p className="text-xs text-zinc-500 mt-1">
+                    {novoProduto.item_id 
+                      ? `✓ Produto do catálogo: ${novoProduto.nome_produto}` 
+                      : `✓ Produto customizado: ${novoProduto.nome_produto}`
+                    }
+                  </p>
+                )}
               </div>
 
               <div>
@@ -439,7 +545,7 @@ export function Estoque() {
 
             <div className="flex gap-3 p-6 border-t border-zinc-800">
               <button
-                onClick={() => setShowModal(false)}
+                onClick={() => setShowAddModal(false)}
                 className="flex-1 px-4 py-2 bg-zinc-800 hover:bg-zinc-700 text-white rounded-lg transition"
               >
                 Cancelar
@@ -456,13 +562,13 @@ export function Estoque() {
       )}
 
       {/* Modal Abater Quantidade */}
-      {showAbaterModal && produtoSelecionado && (
+      {showAbateModal && produtoSelecionado && (
         <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50 p-4">
           <div className="bg-zinc-900 border border-zinc-800 rounded-xl w-full max-w-md">
             <div className="flex items-center justify-between p-6 border-b border-zinc-800">
               <h2 className="text-xl font-bold text-white">Abater Quantidade</h2>
               <button
-                onClick={() => setShowAbaterModal(false)}
+                onClick={() => setShowAbateModal(false)}
                 className="text-zinc-400 hover:text-white transition"
               >
                 <X size={24} />
@@ -498,7 +604,7 @@ export function Estoque() {
 
             <div className="flex gap-3 p-6 border-t border-zinc-800">
               <button
-                onClick={() => setShowAbaterModal(false)}
+                onClick={() => setShowAbateModal(false)}
                 className="flex-1 px-4 py-2 bg-zinc-800 hover:bg-zinc-700 text-white rounded-lg transition"
               >
                 Cancelar
@@ -508,6 +614,53 @@ export function Estoque() {
                 className="flex-1 px-4 py-2 bg-blue-700 hover:bg-blue-600 text-white rounded-lg transition"
               >
                 Confirmar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal de Confirmação de Exclusão */}
+      {showDeleteModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-zinc-900 border border-zinc-800 rounded-xl w-full max-w-md">
+            <div className="flex items-center justify-between p-6 border-b border-zinc-800">
+              <h2 className="text-xl font-bold text-white">Confirmar Exclusão</h2>
+              <button
+                onClick={() => {
+                  setShowDeleteModal(false);
+                  setProdutoParaDeletar(null);
+                }}
+                className="text-zinc-400 hover:text-white transition"
+              >
+                <X size={24} />
+              </button>
+            </div>
+
+            <div className="p-6">
+              <p className="text-zinc-300">
+                Deseja remover este produto do estoque?
+              </p>
+              <p className="text-sm text-zinc-500 mt-2">
+                Esta ação não pode ser desfeita.
+              </p>
+            </div>
+
+            <div className="flex gap-3 p-6 border-t border-zinc-800">
+              <button
+                onClick={() => {
+                  setShowDeleteModal(false);
+                  setProdutoParaDeletar(null);
+                }}
+                className="flex-1 px-4 py-2 bg-zinc-800 hover:bg-zinc-700 text-white rounded-lg transition"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={confirmDelete}
+                className="flex-1 px-4 py-2 bg-red-700 hover:bg-red-600 text-white rounded-lg transition"
+              >
+                Remover
               </button>
             </div>
           </div>
