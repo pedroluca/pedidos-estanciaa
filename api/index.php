@@ -149,5 +149,31 @@ if ($uri === '/producao/contabilizacao' && $requestMethod === 'GET') {
     $controller->getContabilizacao();
 }
 
+// Rotas de estoque de perecíveis
+if ($uri === '/estoque' && $requestMethod === 'GET') {
+    $controller = new EstoqueController();
+    $controller->listar();
+}
+
+if ($uri === '/estoque' && $requestMethod === 'POST') {
+    $controller = new EstoqueController();
+    $controller->criar();
+}
+
+if (preg_match('#^/estoque/(\d+)$#', $uri, $matches) && $requestMethod === 'GET') {
+    $controller = new EstoqueController();
+    $controller->buscar($matches[1]);
+}
+
+if (preg_match('#^/estoque/(\d+)/abater$#', $uri, $matches) && $requestMethod === 'PUT') {
+    $controller = new EstoqueController();
+    $controller->abater($matches[1]);
+}
+
+if (preg_match('#^/estoque/(\d+)$#', $uri, $matches) && $requestMethod === 'DELETE') {
+    $controller = new EstoqueController();
+    $controller->deletar($matches[1]);
+}
+
 // Rota não encontrada
 Response::error('Rota não encontrada', 404);
