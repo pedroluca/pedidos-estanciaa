@@ -2,7 +2,6 @@ import { useState, useEffect, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import { LogOut, Plus, RefreshCw, X, Edit2, Save } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
-import { useOrderPolling } from '../hooks/useOrderPolling';
 import { api } from '../lib/api';
 import type { Pedido } from '../types';
 
@@ -36,8 +35,8 @@ export function Dashboard() {
     }
   }, []);
 
-  // Ativa o polling automático a cada 1 minuto
-  useOrderPolling(loadPedidos);
+  // Dashboard não precisa de polling - usuário pode atualizar manualmente
+  // Polling está ativo apenas no Painel (que fica aberto o dia todo)
 
   const syncCatalogo = async () => {
     try {

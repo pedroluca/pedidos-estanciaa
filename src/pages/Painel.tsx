@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { ArrowLeft, Maximize2, Minimize2 } from 'lucide-react'
 import { useOrderPolling } from '../hooks/useOrderPolling'
 import { api } from '../lib/api'
@@ -16,7 +16,7 @@ export function Painel() {
   const [tempDate, setTempDate] = useState<string>(new Date().toISOString().split('T')[0])
   const navigate = useNavigate()
 
-  const loadPedidos = async () => {
+  const loadPedidos = useCallback(async () => {
     try {
       setLoading(true)
       const data = await api.getPainelProducao(dataSelecionada)
@@ -26,7 +26,7 @@ export function Painel() {
     } finally {
       setLoading(false)
     }
-  }
+  }, [dataSelecionada])
 
   const handleToggleFeito = async (pedidoId: number) => {
     try {
@@ -38,7 +38,8 @@ export function Painel() {
     }
   }
 
-  // Ativa o polling automático a cada 1 minuto
+  // Polling ativo no Painel pois ele fica aberto o dia todo na produção
+  // Atualiza automaticamente quando chegam novos pedidos
   useOrderPolling(loadPedidos)
 
   useEffect(() => {

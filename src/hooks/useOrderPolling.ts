@@ -30,5 +30,6 @@ export function useOrderPolling(onUpdate?: () => void) {
         clearInterval(intervalRef.current);
       }
     };
-  }, [onUpdate]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // Dependency array vazio para evitar restart do polling
 }
