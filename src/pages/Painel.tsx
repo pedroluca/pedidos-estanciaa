@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react'
-import { ArrowLeft, Maximize2, Minimize2 } from 'lucide-react'
+import { ArrowLeft, Maximize2, Minimize2, Calendar } from 'lucide-react'
 import { useOrderPolling } from '../hooks/useOrderPolling'
 import { api } from '../lib/api'
 import type { Pedido } from '../types'
@@ -12,7 +12,7 @@ export function Painel() {
   const [selectedPedido, setSelectedPedido] = useState<Pedido | null>(null)
   const [zoomedImage, setZoomedImage] = useState<string | null>(null)
   const [dataSelecionada, setDataSelecionada] = useState<string>(new Date().toISOString().split('T')[0])
-  const [isEditingDate, setIsEditingDate] = useState(false)
+  const [showDatePicker, setShowDatePicker] = useState(false)
   const [tempDate, setTempDate] = useState<string>(new Date().toISOString().split('T')[0])
   const navigate = useNavigate()
 
@@ -44,13 +44,10 @@ export function Painel() {
 
   useEffect(() => {
     loadPedidos()
-    // Só ativa o intervalo se não estiver editando a data
-    if (!isEditingDate) {
-      const interval = setInterval(loadPedidos, 30000) // Atualiza a cada 30 segundos
-      return () => clearInterval(interval)
-    }
+    const interval = setInterval(loadPedidos, 30000) // Atualiza a cada 30 segundos
+    return () => clearInterval(interval)
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [dataSelecionada, isEditingDate])
+  }, [dataSelecionada])
 
   const handleFullscreen = () => {
     if (!isFullscreen) {
@@ -91,179 +88,200 @@ export function Painel() {
   }
 
   return (
-    <div className="h-screen bg-[#111] text-white flex flex-col items-center px-6 relative">
-      {/* Botão de Fullscreen */}
-      <button
-        onClick={handleFullscreen}
-        className="absolute top-6 right-6 z-50 bg-[#222] hover:bg-[#333] border border-gray-700 rounded-full p-3 shadow-lg transition-colors"
-        title={isFullscreen ? 'Sair do Fullscreen' : 'Tela cheia'}
-      >
-        {isFullscreen ? <Minimize2 size={24} /> : <Maximize2 size={24} />}
-      </button>
-
-      {/* Cabeçalho */}
-      <div className="flex flex-col sm:flex-row items-center justify-between h-[6%] w-full gap-4 pr-16">
-        <h1 className="text-3xl font-semibold text-center sm:text-left">
-          Floricultura Estância-A - Painel de Produção
-        </h1>
-
-        <div className="flex items-center gap-4">
-          {/* Botão de Voltar */}
+    <div className="h-screen bg-[#111] text-white flex relative">
+      <div className="flex flex-col w-16 h-full items-center justify-start p-2 gap-4">
+        {/* Botão de Voltar */}
+        <button
+          onClick={() => navigate('/dashboard')}
+          className="bg-[#222] hover:bg-[#333] hover:cursor-pointer border border-gray-700 rounded-full p-2 shadow-lg transition-colors"
+        >
+          <ArrowLeft />
+        </button>
+        
+        {/* Botão Seletor de Data */}
+        <div className="relative">
           <button
-            onClick={() => navigate('/dashboard')}
-            className="bg-[#222] hover:bg-[#333] flex items-center gap-2 hover:cursor-pointer border border-gray-700 rounded-lg px-4 py-2 shadow-lg transition-colors"
+            onClick={() => setShowDatePicker(!showDatePicker)}
+            className="bg-[#222] hover:bg-[#333] border border-gray-700 rounded-full p-2 shadow-lg transition-colors"
+            title="Selecionar data"
           >
-            <ArrowLeft />
-            Voltar
+            <Calendar />
           </button>
           
-          {/* Seletor de Data */}
-          <div className="flex items-center gap-3 bg-[#1e1e1e] border border-gray-700 rounded-lg px-4 py-2 min-w-[200px]">
-            <input
-              type="date"
-              value={isEditingDate ? tempDate : dataSelecionada}
-              onChange={(e) => setTempDate(e.target.value)}
-              onFocus={() => {
-                setIsEditingDate(true)
-                setTempDate(dataSelecionada)
-              }}
-              onBlur={() => {
-                setIsEditingDate(false)
-                if (tempDate && tempDate.length === 10) {
-                  setDataSelecionada(tempDate)
-                }
-              }}
-              className="bg-transparent text-white outline-none cursor-pointer w-full"
-              style={{
-                colorScheme: 'dark'
-              }}
-            />
-          </div>
+          {/* Popup do Date Picker */}
+          {showDatePicker && (
+            <div className="absolute left-14 top-0 bg-[#1e1e1e] border border-gray-700 rounded-lg p-4 shadow-2xl z-50 min-w-[280px]">
+              <div className="mb-3">
+                <p className="text-sm text-gray-400 mb-2">Selecione a data:</p>
+                <input
+                  type="date"
+                  value={tempDate}
+                  onChange={(e) => setTempDate(e.target.value)}
+                  className="w-full bg-[#2a2a2a] border border-gray-600 text-white rounded-lg px-3 py-2 outline-none focus:border-blue-500"
+                  style={{
+                    colorScheme: 'dark'
+                  }}
+                />
+              </div>
+              <div className="flex gap-2">
+                <button
+                  onClick={() => {
+                    setShowDatePicker(false)
+                    setTempDate(dataSelecionada)
+                  }}
+                  className="flex-1 px-3 py-2 bg-gray-700 hover:bg-gray-600 text-white rounded-lg text-sm transition-colors"
+                >
+                  Cancelar
+                </button>
+                <button
+                  onClick={() => {
+                    if (tempDate && tempDate.length === 10) {
+                      setDataSelecionada(tempDate)
+                    }
+                    setShowDatePicker(false)
+                  }}
+                  className="flex-1 px-3 py-2 bg-blue-700 hover:bg-blue-600 text-white rounded-lg text-sm transition-colors"
+                >
+                  Confirmar
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
         
-        </div>
+        {/* Botão de Fullscreen */}
+        <button
+          onClick={handleFullscreen}
+          className="bg-[#222] hover:bg-[#333] border border-gray-700 rounded-full p-2 shadow-lg transition-colors"
+          title={isFullscreen ? 'Sair do Fullscreen' : 'Tela cheia'}
+        >
+          {isFullscreen ? <Minimize2 /> : <Maximize2 />}
+        </button>
       </div>
 
-      {/* Pedidos da Manhã */}
-      <div className="w-full h-[47%]">
-        <h2 className="text-xl font-medium text-gray-300 mb-4 flex items-center gap-2 pl-1">
-          🌅 Pedidos da Manhã
-        </h2>
+      <section className='w-full h-full grid grid-cols-1 grid-rows-2 gap-4 overflow-hidden'>
+        {/* Pedidos da Manhã */}
+        <div className="w-full overflow-hidden flex flex-col">
+          <h2 className="text-xl font-medium text-gray-300 flex items-center gap-2 pl-1">
+            🌅 Pedidos da Manhã
+          </h2>
 
-        <div className="relative overflow-visible">
-          <div className="flex gap-6 overflow-x-auto scroll-smooth pt-3 px-1 [&::-webkit-scrollbar]:h-2 [&::-webkit-scrollbar-thumb]:bg-gray-600 [&::-webkit-scrollbar-thumb]:rounded-full">
-            {manha.length === 0 ? (
-              <div className="text-gray-500 italic">Nenhum pedido nesta seção.</div>
-            ) : (
-              manha.map((pedido) => (
-                <div
-                  key={pedido.id}
-                  onClick={() => setSelectedPedido(pedido)}
-                  className="shrink-0 rounded-2xl p-3 bg-[#1e1e1e] border border-gray-700 shadow-sm cursor-pointer hover:scale-105 transition-transform w-72 relative"
-                >
-                  {/* Badge PRODUZIDO */}
-                  {pedido.is_feito && (
-                    <div className="absolute top-0 -right-3 bg-emerald-600 text-white text-xs font-bold px-4 py-2 rounded-full shadow-lg rotate-12 z-50">
-                      ✓ PRODUZIDO
-                    </div>
-                  )}
+          <div className="relative overflow-visible flex-1">
+            <div className="flex h-full gap-6 overflow-x-auto overflow-y-hidden scroll-smooth pt-3 px-1 [&::-webkit-scrollbar]:h-2 [&::-webkit-scrollbar-thumb]:bg-gray-600 [&::-webkit-scrollbar-thumb]:rounded-full">
+              {manha.length === 0 ? (
+                <div className="text-gray-500 italic">Nenhum pedido nesta seção.</div>
+              ) : (
+                manha.map((pedido) => (
+                  <div
+                    key={pedido.id}
+                    onClick={() => setSelectedPedido(pedido)}
+                    className="flex flex-col justify-between shrink-0 rounded-2xl p-2 bg-[#1e1e1e] border border-gray-700 shadow-sm cursor-pointer hover:scale-105 transition-transform w-72 relative"
+                  >
+                    {/* Badge PRODUZIDO */}
+                    {pedido.is_feito && (
+                      <div className="absolute top-0 -right-3 bg-emerald-600 text-white text-xs font-bold px-4 py-2 rounded-full shadow-lg rotate-12 z-50">
+                        ✓ PRODUZIDO
+                      </div>
+                    )}
 
-                  <h3 className="text-lg font-medium mb-3">Pedido #{pedido.numero_pedido}</h3>
-                  
-                  {/* Imagem do primeiro item */}
-                  {pedido.itens && pedido.itens.length > 0 ? (
-                    <div className="relative mb-2">
-                      <img
-                        src={pedido.itens[0].imagem || 'https://placehold.co/200x200/1e1e1e/aaa?text=Sem+Imagem'}
-                        alt={pedido.itens[0].nome}
-                        className="w-full h-36 2xl:h-48 object-cover rounded-lg"
-                      />
-                      {pedido.itens.length > 1 && (
-                        <span className="absolute top-2 right-2 bg-red-600 text-white text-sm font-bold px-3 py-1.5 rounded-full shadow-lg">
-                          +{pedido.itens.length - 1} {pedido.itens.length === 2 ? 'item' : 'itens'}
-                        </span>
-                      )}
-                    </div>
-                  ) : (
-                    <div className="text-gray-500 italic text-sm mb-4 h-36 2xl:h-48 flex items-center justify-center border border-gray-700 rounded-lg">
-                      Sem itens cadastrados
-                    </div>
-                  )}
+                    <h3 className="text-lg font-medium mb-1">Pedido #{pedido.numero_pedido}</h3>
+                    
+                    {/* Imagem do primeiro item */}
+                    {pedido.itens && pedido.itens.length > 0 ? (
+                      <div className="relative mb-2">
+                        <img
+                          src={pedido.itens[0].imagem || 'https://placehold.co/200x200/1e1e1e/aaa?text=Sem+Imagem'}
+                          alt={pedido.itens[0].nome}
+                          className="w-full h-24 2xl:h-44 object-cover rounded-lg"
+                        />
+                        {pedido.itens.length > 1 && (
+                          <span className="absolute top-2 right-2 bg-red-600 text-white text-sm font-bold px-3 py-1.5 rounded-full shadow-lg">
+                            +{pedido.itens.length - 1} {pedido.itens.length === 2 ? 'item' : 'itens'}
+                          </span>
+                        )}
+                      </div>
+                    ) : (
+                      <div className="text-gray-500 italic text-sm mb-4 h-36 2xl:h-48 flex items-center justify-center border border-gray-700 rounded-lg">
+                        Sem itens cadastrados
+                      </div>
+                    )}
 
-                  <div className="bg-blue-600/20 border border-blue-500/30 rounded-lg px-3 py-2 mb-2">
-                    <span className="text-blue-300 text-xs font-medium">🕐 Horário:</span>
-                    <span className="text-blue-100 text-sm font-bold ml-2">{pedido.horario_agendamento}</span>
+                    <div className="bg-blue-600/20 border border-blue-500/30 rounded-lg px-3 py-2 mb-2">
+                      <span className="text-blue-300 text-xs font-medium">🕐 Horário:</span>
+                      <span className="text-blue-100 text-sm font-bold ml-2">{pedido.horario_agendamento}</span>
+                    </div>
+
+                    <div className={`${statusColors[pedido.status] || 'bg-gray-600'} text-white text-sm px-3 py-1 rounded-md text-center`}>
+                      {pedido.status}
+                    </div>
                   </div>
-
-                  <div className={`${statusColors[pedido.status] || 'bg-gray-600'} text-white text-sm px-3 py-1 rounded-md text-center`}>
-                    {pedido.status}
-                  </div>
-                </div>
-              ))
-            )}
+                ))
+              )}
+            </div>
           </div>
         </div>
-      </div>
 
-      {/* Pedidos da Tarde */}
-      <div className="w-full h-[47%]">
-        <h2 className="text-xl font-medium text-gray-300 mb-4 flex items-center gap-2 pl-1">
-          🌇 Pedidos da Tarde
-        </h2>
+        {/* Pedidos da Tarde */}
+        <div className="w-full overflow-hidden flex flex-col">
+          <h2 className="text-xl font-medium text-gray-300 flex items-center gap-2 pl-1">
+            🌇 Pedidos da Tarde
+          </h2>
 
-        <div className="relative overflow-visible">
-          <div className="flex gap-6 overflow-x-auto scroll-smooth pt-3 px-1 [&::-webkit-scrollbar]:h-2 [&::-webkit-scrollbar-thumb]:bg-gray-600 [&::-webkit-scrollbar-thumb]:rounded-full">
-            {tarde.length === 0 ? (
-              <div className="text-gray-500 italic">Nenhum pedido nesta seção.</div>
-            ) : (
-              tarde.map((pedido) => (
-                <div
-                  key={pedido.id}
-                  onClick={() => setSelectedPedido(pedido)}
-                  className="shrink-0 rounded-2xl p-3 bg-[#1e1e1e] border border-gray-700 shadow-sm cursor-pointer hover:scale-105 transition-transform w-72 relative"
-                >
-                  {/* Badge PRODUZIDO */}
-                  {pedido.is_feito && (
-                    <div className="absolute top-0 -right-3 bg-emerald-600 text-white text-xs font-bold px-4 py-2 rounded-full shadow-lg rotate-12 z-50">
-                      ✓ PRODUZIDO
+          <div className="relative overflow-visible flex-1">
+            <div className="flex gap-6 h-full overflow-x-auto overflow-y-hidden scroll-smooth pt-3 px-1 [&::-webkit-scrollbar]:h-2 [&::-webkit-scrollbar-thumb]:bg-gray-600 [&::-webkit-scrollbar-thumb]:rounded-full">
+              {tarde.length === 0 ? (
+                <div className="text-gray-500 italic">Nenhum pedido nesta seção.</div>
+              ) : (
+                tarde.map((pedido) => (
+                  <div
+                    key={pedido.id}
+                    onClick={() => setSelectedPedido(pedido)}
+                    className="flex flex-col justify-between shrink-0 rounded-2xl p-2 bg-[#1e1e1e] border border-gray-700 shadow-sm cursor-pointer hover:scale-105 transition-transform w-72 relative"
+                  >
+                    {/* Badge PRODUZIDO */}
+                    {pedido.is_feito && (
+                      <div className="absolute top-0 -right-3 bg-emerald-600 text-white text-xs font-bold px-4 py-2 rounded-full shadow-lg rotate-12 z-50">
+                        ✓ PRODUZIDO
+                      </div>
+                    )}
+
+                    <h3 className="text-lg font-medium mb-1">Pedido #{pedido.numero_pedido}</h3>
+                    
+                    {/* Imagem do primeiro item */}
+                    {pedido.itens && pedido.itens.length > 0 ? (
+                      <div className="relative mb-2">
+                        <img
+                          src={pedido.itens[0].imagem || 'https://placehold.co/200x200/1e1e1e/aaa?text=Sem+Imagem'}
+                          alt={pedido.itens[0].nome}
+                          className="w-full h-24 2xl:h-44 object-cover rounded-lg"
+                        />
+                        {pedido.itens.length > 1 && (
+                          <span className="absolute top-2 right-2 bg-red-600 text-white text-sm font-bold px-3 py-1.5 rounded-full shadow-lg">
+                            +{pedido.itens.length - 1} {pedido.itens.length === 2 ? 'item' : 'itens'}
+                          </span>
+                        )}
+                      </div>
+                    ) : (
+                      <div className="text-gray-500 italic text-sm mb-4 h-36 2xl:h-48 flex items-center justify-center border border-gray-700 rounded-lg">
+                        Sem itens cadastrados
+                      </div>
+                    )}
+
+                    <div className="bg-blue-600/20 border border-blue-500/30 rounded-lg px-3 py-2 mb-2">
+                      <span className="text-blue-300 text-xs font-medium">🕐 Horário:</span>
+                      <span className="text-blue-100 text-sm font-bold ml-2">{pedido.horario_agendamento}</span>
                     </div>
-                  )}
 
-                  <h3 className="text-lg font-medium mb-3">Pedido #{pedido.numero_pedido}</h3>
-                  
-                  {/* Imagem do primeiro item */}
-                  {pedido.itens && pedido.itens.length > 0 ? (
-                    <div className="relative mb-2">
-                      <img
-                        src={pedido.itens[0].imagem || 'https://placehold.co/200x200/1e1e1e/aaa?text=Sem+Imagem'}
-                        alt={pedido.itens[0].nome}
-                        className="w-full h-36 2xl:h-48 object-cover rounded-lg"
-                      />
-                      {pedido.itens.length > 1 && (
-                        <span className="absolute top-2 right-2 bg-red-600 text-white text-sm font-bold px-3 py-1.5 rounded-full shadow-lg">
-                          +{pedido.itens.length - 1} {pedido.itens.length === 2 ? 'item' : 'itens'}
-                        </span>
-                      )}
+                    <div className={`${statusColors[pedido.status] || 'bg-gray-600'} text-white text-sm px-3 py-1 rounded-md text-center`}>
+                      {pedido.status}
                     </div>
-                  ) : (
-                    <div className="text-gray-500 italic text-sm mb-4 h-36 2xl:h-48 flex items-center justify-center border border-gray-700 rounded-lg">
-                      Sem itens cadastrados
-                    </div>
-                  )}
-
-                  <div className="bg-blue-600/20 border border-blue-500/30 rounded-lg px-3 py-2 mb-2">
-                    <span className="text-blue-300 text-xs font-medium">🕐 Horário:</span>
-                    <span className="text-blue-100 text-sm font-bold ml-2">{pedido.horario_agendamento}</span>
                   </div>
-
-                  <div className={`${statusColors[pedido.status] || 'bg-gray-600'} text-white text-sm px-3 py-1 rounded-md text-center`}>
-                    {pedido.status}
-                  </div>
-                </div>
-              ))
-            )}
+                ))
+              )}
+            </div>
           </div>
         </div>
-      </div>
+      </section>
 
       {/* Modal de Detalhes */}
       {selectedPedido && (
