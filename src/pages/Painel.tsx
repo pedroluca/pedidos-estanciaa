@@ -192,7 +192,7 @@ export function Painel() {
                         <img
                           src={pedido.itens[0].imagem || 'https://placehold.co/200x200/1e1e1e/aaa?text=Sem+Imagem'}
                           alt={pedido.itens[0].nome}
-                          className="w-full h-24 2xl:h-44 object-cover rounded-lg"
+                          className="w-full h-36 lg:h-44 object-cover rounded-lg"
                         />
                         {pedido.itens.length > 1 && (
                           <span className="absolute top-2 right-2 bg-red-600 text-white text-sm font-bold px-3 py-1.5 rounded-full shadow-lg">
@@ -201,7 +201,7 @@ export function Painel() {
                         )}
                       </div>
                     ) : (
-                      <div className="text-gray-500 italic text-sm mb-4 h-36 2xl:h-48 flex items-center justify-center border border-gray-700 rounded-lg">
+                      <div className="text-gray-500 italic text-sm mb-4 h-36 lg:h-44 flex items-center justify-center border border-gray-700 rounded-lg">
                         Sem itens cadastrados
                       </div>
                     )}
@@ -253,7 +253,7 @@ export function Painel() {
                         <img
                           src={pedido.itens[0].imagem || 'https://placehold.co/200x200/1e1e1e/aaa?text=Sem+Imagem'}
                           alt={pedido.itens[0].nome}
-                          className="w-full h-24 2xl:h-44 object-cover rounded-lg"
+                          className="w-full h-36 lg:h-44 object-cover rounded-lg"
                         />
                         {pedido.itens.length > 1 && (
                           <span className="absolute top-2 right-2 bg-red-600 text-white text-sm font-bold px-3 py-1.5 rounded-full shadow-lg">
@@ -262,7 +262,7 @@ export function Painel() {
                         )}
                       </div>
                     ) : (
-                      <div className="text-gray-500 italic text-sm mb-4 h-36 2xl:h-48 flex items-center justify-center border border-gray-700 rounded-lg">
+                      <div className="text-gray-500 italic text-sm mb-4 h-36 lg:h-44 flex items-center justify-center border border-gray-700 rounded-lg">
                         Sem itens cadastrados
                       </div>
                     )}
