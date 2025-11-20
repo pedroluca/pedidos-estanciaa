@@ -1,19 +1,40 @@
-# Cron Job - Polling Automático
+# Cron Jobs - Polling Automático
+
+## Auto-Poll (Novo - Importante!)
+
+Script que executa polling automaticamente a cada 30 minutos, garantindo que pedidos sejam sincronizados mesmo com o painel fechado.
+
+### Arquivo: `auto-poll.php`
+
+Executa o polling completo sem necessidade de autenticação, ideal para rodar como cron job no servidor.
+
+**Benefícios:**
+- ✅ Sincroniza pedidos mesmo com painel fechado
+- ✅ Evita pedidos ficarem "perdidos" por mais de 30 minutos
+- ✅ Logs detalhados de cada execução
+- ✅ Respeita flags de edição manual
 
 ## Configuração no Hostinger (cPanel)
 
-1. **Acesse o cPanel do Hostinger**
+### 1. Acesse o cPanel do Hostinger
 2. **Procure por "Cron Jobs"**
 3. **Adicione um novo Cron Job**
 
-### Configuração Recomendada (A cada 1 minuto):
-```
-* * * * * /usr/bin/php /home/u428622816/domains/SEU-DOMINIO/public_html/api/cron/poll-orders.php >> /home/u428622816/domains/SEU-DOMINIO/public_html/api/cron/logs/poll.log 2>&1
+### ⭐ Configuração do Auto-Poll (RECOMENDADO):
+
+**A cada 30 minutos:**
+```bash
+*/30 * * * * /usr/bin/php /home/u428622816/domains/SEU-DOMINIO/public_html/api/cron/auto-poll.php >> /home/u428622816/domains/SEU-DOMINIO/public_html/api/cron/logs/auto-poll.log 2>&1
 ```
 
-### Configuração Alternativa (A cada 5 minutos):
+**Ou a cada 15 minutos (mais frequente):**
+```bash
+*/15 * * * * /usr/bin/php /home/u428622816/domains/SEU-DOMINIO/public_html/api/cron/auto-poll.php >> /home/u428622816/domains/SEU-DOMINIO/public_html/api/cron/logs/auto-poll.log 2>&1
 ```
-*/5 * * * * /usr/bin/php /home/u428622816/domains/SEU-DOMINIO/public_html/api/cron/poll-orders.php >> /home/u428622816/domains/SEU-DOMINIO/public_html/api/cron/logs/poll.log 2>&1
+
+### Configuração Antiga (poll-orders.php - Pode remover):
+```bash
+* * * * * /usr/bin/php /home/u428622816/domains/SEU-DOMINIO/public_html/api/cron/poll-orders.php >> /home/u428622816/domains/SEU-DOMINIO/public_html/api/cron/logs/poll.log 2>&1
 ```
 
 **IMPORTANTE:** Substitua `SEU-DOMINIO` pelo domínio real configurado no Hostinger.
@@ -26,12 +47,31 @@
 ```
 [2025-11-04 15:30:01] Iniciando polling de pedidos...
 [2025-11-04 15:30:03] Polling concluído com sucesso!
-  - Novos: 0
-  - Atualizados: 0
-  - Total: 43
+## Verificar se está funcionando
+
+### Via Logs:
+```bash
+tail -f api/cron/logs/auto-poll.log
 ```
 
-## Acesso via URL (backup)
+Você verá algo como:
+```
+[2025-11-19 14:30:01] ========================================
+[2025-11-19 14:30:01] Iniciando polling automático
+[2025-11-19 14:30:01] Data/Hora: 2025-11-19 14:30:01
+[2025-11-19 14:30:02] Total de pedidos retornados: 15
+[2025-11-19 14:30:05] Polling concluído com sucesso
+[2025-11-19 14:30:05] Novos pedidos: 2
+[2025-11-19 14:30:05] Pedidos atualizados: 3
+[2025-11-19 14:30:05] Erros: 0
+[2025-11-19 14:30:05] Tempo de execução: 4.23s
+[2025-11-19 14:30:05] ========================================
+```
+
+### Via Banco de Dados:
+Verifique se novos pedidos estão aparecendo na tabela `pedidos` mesmo com o painel fechado.
+
+## Acesso via URL (backup - NÃO RECOMENDADO)
 
 Se não conseguir configurar o cron, pode acessar via URL (menos seguro):
 
@@ -41,14 +81,14 @@ https://seu-dominio.com/api/cron/poll-orders.php?secret=SEU_SEGREDO_AQUI
 
 Configure a variável `CRON_SECRET` no arquivo `.env` ou no servidor.
 
-## Logs
+## Limpeza de Logs Antigos
 
-Os logs ficam salvos em: `api/cron/logs/poll.log`
-
-Para ver os últimos logs:
+Para evitar acúmulo, adicione ao crontab:
 ```bash
-tail -f api/cron/logs/poll.log
+0 3 * * * find /home/u428622816/domains/SEU-DOMINIO/public_html/api/cron/logs -name "*.log" -mtime +7 -delete
 ```
+
+Isso limpa logs com mais de 7 dias, todo dia às 3h da manhã.
 
 ## Troubleshooting
 
