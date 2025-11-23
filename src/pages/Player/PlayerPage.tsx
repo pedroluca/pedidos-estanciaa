@@ -114,7 +114,7 @@ export function PlayerPage() {
             <img 
               src={`https://estanciaa.app.br/api/${card.image_path}`} 
               alt="Cover" 
-              className="w-full h-full object-cover"
+              className="w-full h-full object-top object-cover"
             />
           ) : (
             <img 

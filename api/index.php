@@ -191,7 +191,7 @@ if (preg_match('#^/public/audio-cards/(\d+)$#', $uri, $matches) && $requestMetho
     $controller->getById($matches[1]);
 }
 
-if (preg_match('#^/audio-cards/(\d+)$#', $uri, $matches) && $requestMethod === 'PUT') {
+if (preg_match('#^/audio-cards/(\d+)$#', $uri, $matches) && ($requestMethod === 'PUT' || $requestMethod === 'POST')) {
     $controller = new AudioCardController();
     $controller->update($matches[1]);
 }
