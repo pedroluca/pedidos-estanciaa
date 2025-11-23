@@ -1,6 +1,6 @@
 import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { LayoutDashboard, ShoppingBag, DollarSign, Package, Music, LogOut, Menu, X, Eye } from 'lucide-react';
+import { LayoutDashboard, ShoppingBag, DollarSign, Package, Music, LogOut, Menu, X, PanelTopBottomDashed } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
 
 interface DashboardLayoutProps {
@@ -16,11 +16,12 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
 
   const menuItems = [
     { path: '/dashboard', icon: LayoutDashboard, label: 'Dashboard' },
-    { path: '/painel', icon: Eye, label: 'Painel' },
+    { path: '/painel', icon: PanelTopBottomDashed, label: 'Painel de Produção' },
     { path: '/dashboard/novo-pedido', icon: ShoppingBag, label: 'Novo Pedido' },
     { path: '/dashboard/contabilizacao', icon: DollarSign, label: 'Contabilização' },
     { path: '/dashboard/estoque', icon: Package, label: 'Estoque' },
     { path: '/dashboard/audio-cards', icon: Music, label: 'Cartões de Áudio' },
+    { path: '/dashboard/telemensagens', icon: Music, label: 'Telemensagens' },
   ];
 
   return (

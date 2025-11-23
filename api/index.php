@@ -191,8 +191,29 @@ if (preg_match('#^/public/audio-cards/(\d+)$#', $uri, $matches) && $requestMetho
     $controller->getById($matches[1]);
 }
 
+if (preg_match('#^/audio-cards/(\d+)$#', $uri, $matches) && $requestMethod === 'PUT') {
+    $controller = new AudioCardController();
+    $controller->update($matches[1]);
+}
+
 if (preg_match('#^/audio-cards/(\d+)$#', $uri, $matches) && $requestMethod === 'DELETE') {
     $controller = new AudioCardController();
+    $controller->delete($matches[1]);
+}
+
+// Rotas de Telemensagens
+if ($uri === '/telemensagens' && $requestMethod === 'GET') {
+    $controller = new TelemensagemController();
+    $controller->getAll();
+}
+
+if ($uri === '/telemensagens' && $requestMethod === 'POST') {
+    $controller = new TelemensagemController();
+    $controller->create();
+}
+
+if (preg_match('#^/telemensagens/(\d+)$#', $uri, $matches) && $requestMethod === 'DELETE') {
+    $controller = new TelemensagemController();
     $controller->delete($matches[1]);
 }
 

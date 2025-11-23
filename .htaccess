@@ -1,0 +1,21 @@
+<IfModule mod_rewrite.c>
+  RewriteEngine On
+  RewriteBase /
+
+  # Handle CORS
+  Header set Access-Control-Allow-Origin "*"
+  Header set Access-Control-Allow-Headers "Origin, X-Requested-With, Content-Type, Accept, Authorization"
+  Header set Access-Control-Allow-Methods "GET, POST, OPTIONS, PUT, DELETE"
+
+  # Allow access to existing files and directories
+  RewriteCond %{REQUEST_FILENAME} -f [OR]
+  RewriteCond %{REQUEST_FILENAME} -d
+  RewriteRule ^ - [L]
+
+  # Handle the player subdomain - Serve index.html for everything
+  RewriteCond %{HTTP_HOST} ^player\.estanciaa\.app\.br$ [NC]
+  RewriteRule ^(.*)$ /index.html [L]
+
+  # Handle the main domain SPA routing - Serve index.html for everything else
+  RewriteRule ^(.*)$ /index.html [L]
+</IfModule>

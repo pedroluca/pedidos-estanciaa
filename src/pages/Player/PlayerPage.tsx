@@ -6,6 +6,7 @@ interface AudioCard {
   sender_name: string;
   receiver_name: string;
   audio_path: string;
+  image_path?: string;
   status: string;
 }
 
@@ -108,17 +109,25 @@ export function PlayerPage() {
       <div className="flex-1 flex flex-col items-center justify-center p-6 max-w-md mx-auto w-full">
         {/* Album Art */}
         <div className="w-64 h-64 bg-gradient-to-br from-pink-500 to-purple-600 rounded-lg shadow-2xl mb-8 flex items-center justify-center relative overflow-hidden group">
-          <div className="absolute inset-0 bg-black/20 group-hover:bg-black/40 transition-colors"></div>
-          <img 
-            src="/logo.png" 
-            alt="Cover" 
-            className="w-32 h-32 object-contain opacity-80 drop-shadow-lg"
-            onError={(e) => {
-              e.currentTarget.style.display = 'none';
-            }}
-          />
+          <div className="absolute inset-0 bg-black/20 group-hover:bg-black/40 transition-colors z-10"></div>
+          {card.image_path ? (
+            <img 
+              src={`https://estanciaa.app.br/api/${card.image_path}`} 
+              alt="Cover" 
+              className="w-full h-full object-cover"
+            />
+          ) : (
+            <img 
+              src="/logo.png" 
+              alt="Cover" 
+              className="w-32 h-32 object-contain opacity-80 drop-shadow-lg"
+              onError={(e) => {
+                e.currentTarget.style.display = 'none';
+              }}
+            />
+          )}
           {!isPlaying && (
-            <div className="absolute inset-0 flex items-center justify-center">
+            <div className="absolute inset-0 flex items-center justify-center z-20">
                <Play size={48} className="fill-white text-white opacity-80" />
             </div>
           )}
@@ -144,14 +153,19 @@ export function PlayerPage() {
             type="range"
             ref={progressBarRef}
             min="0"
-            max={duration}
+            max={duration || 0}
             value={currentTime}
             onChange={handleProgressChange}
-            className="w-full h-1 bg-gray-600 rounded-lg appearance-none cursor-pointer [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-3 [&::-webkit-slider-thumb]:h-3 [&::-webkit-slider-thumb]:bg-white [&::-webkit-slider-thumb]:rounded-full hover:[&::-webkit-slider-thumb]:scale-125 transition-all"
+            style={{
+              backgroundSize: `${(currentTime / (duration || 1)) * 100}% 100%`
+            }}
+            className="w-full h-1 bg-zinc-800 rounded-lg appearance-none cursor-pointer 
+              [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-3 [&::-webkit-slider-thumb]:h-3 [&::-webkit-slider-thumb]:bg-white [&::-webkit-slider-thumb]:rounded-full hover:[&::-webkit-slider-thumb]:scale-125 transition-all
+              bg-gradient-to-r from-white to-white bg-no-repeat"
           />
           <div className="flex justify-between text-xs text-gray-400 mt-2">
             <span>{formatTime(currentTime)}</span>
-            <span>{formatTime(duration)}</span>
+            <span>{formatTime(duration || 0)}</span>
           </div>
         </div>
 

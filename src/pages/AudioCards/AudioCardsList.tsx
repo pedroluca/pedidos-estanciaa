@@ -1,4 +1,4 @@
-import { Plus, Search, Trash2, QrCode } from 'lucide-react';
+import { Plus, Search, Trash2, QrCode, Edit } from 'lucide-react';
 import { AudioCardModal } from './AudioCardModal';
 import { QRCodeCanvas } from 'qrcode.react';
 import toast from 'react-hot-toast';
@@ -11,6 +11,7 @@ interface AudioCard {
   sender_phone: string;
   receiver_phone: string;
   audio_path: string;
+  image_path?: string;
   status: string;
   order_code: string;
   created_at: string;
@@ -22,6 +23,7 @@ export function AudioCardsList() {
   const [isLoading, setIsLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCard, setSelectedCard] = useState<AudioCard | null>(null);
+  const [editingCard, setEditingCard] = useState<AudioCard | undefined>(undefined);
 
   useEffect(() => {
     fetchCards();
@@ -60,6 +62,16 @@ export function AudioCardsList() {
     }
   };
 
+  const handleEdit = (card: AudioCard) => {
+    setEditingCard(card);
+    setIsModalOpen(true);
+  };
+
+  const handleCloseModal = () => {
+    setIsModalOpen(false);
+    setEditingCard(undefined);
+  };
+
   const filteredCards = cards.filter(card => 
     card.sender_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
     card.receiver_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -73,7 +85,10 @@ export function AudioCardsList() {
       <div className="flex justify-between items-center">
         <h1 className="text-2xl font-bold text-white">Cartões de Áudio</h1>
         <button
-          onClick={() => setIsModalOpen(true)}
+          onClick={() => {
+            setEditingCard(undefined);
+            setIsModalOpen(true);
+          }}
           className="bg-pink-600 hover:bg-pink-700 text-white px-4 py-2 rounded-lg flex items-center gap-2 transition-colors"
         >
           <Plus size={20} />
@@ -104,6 +119,7 @@ export function AudioCardsList() {
                 <th className="p-4">Telefones</th>
                 <th className="p-4">Pedido</th>
                 <th className="p-4">Áudio</th>
+                <th className="p-4">Capa</th>
                 <th className="p-4">QR Code</th>
                 <th className="p-4">Ações</th>
               </tr>
@@ -111,11 +127,11 @@ export function AudioCardsList() {
             <tbody className="divide-y divide-zinc-800">
               {isLoading ? (
                 <tr>
-                  <td colSpan={7} className="p-8 text-center text-zinc-500">Carregando...</td>
+                  <td colSpan={8} className="p-8 text-center text-zinc-500">Carregando...</td>
                 </tr>
               ) : filteredCards.length === 0 ? (
                 <tr>
-                  <td colSpan={7} className="p-8 text-center text-zinc-500">Nenhum cartão encontrado</td>
+                  <td colSpan={8} className="p-8 text-center text-zinc-500">Nenhum cartão encontrado</td>
                 </tr>
               ) : (
                 filteredCards.map(card => (
@@ -142,6 +158,17 @@ export function AudioCardsList() {
                       <audio controls src={`https://estanciaa.app.br/api/${card.audio_path}`} className="h-8 w-40" />
                     </td>
                     <td className="p-4">
+                      {card.image_path ? (
+                        <img 
+                          src={`https://estanciaa.app.br/api/${card.image_path}`} 
+                          alt="Capa" 
+                          className="w-10 h-10 rounded object-cover border border-zinc-700"
+                        />
+                      ) : (
+                        <span className="text-zinc-600 text-xs">Sem capa</span>
+                      )}
+                    </td>
+                    <td className="p-4">
                       <button 
                         onClick={() => setSelectedCard(card)}
                         className="text-zinc-400 hover:text-pink-500 transition-colors"
@@ -150,7 +177,14 @@ export function AudioCardsList() {
                         <QrCode size={20} />
                       </button>
                     </td>
-                    <td className="p-4">
+                    <td className="p-4 flex gap-2">
+                      <button
+                        onClick={() => handleEdit(card)}
+                        className="text-blue-400 hover:text-blue-300 p-2 hover:bg-blue-900/20 rounded-lg transition-colors"
+                        title="Editar"
+                      >
+                        <Edit size={18} />
+                      </button>
                       <button
                         onClick={() => handleDelete(card.id)}
                         className="text-red-400 hover:text-red-300 p-2 hover:bg-red-900/20 rounded-lg transition-colors"
@@ -169,11 +203,12 @@ export function AudioCardsList() {
 
       {isModalOpen && (
         <AudioCardModal 
-          onClose={() => setIsModalOpen(false)} 
+          onClose={handleCloseModal} 
           onSuccess={() => {
-            setIsModalOpen(false);
+            handleCloseModal();
             fetchCards();
           }} 
+          initialData={editingCard}
         />
       )}
 
@@ -193,6 +228,23 @@ export function AudioCardsList() {
               {getPlayerUrl(selectedCard.id)}
             </p>
             <div className="flex gap-2 justify-center">
+              <button
+                onClick={() => {
+                  const canvas = document.querySelector('canvas');
+                  if (canvas) {
+                    const pngUrl = canvas.toDataURL('image/png');
+                    const downloadLink = document.createElement('a');
+                    downloadLink.href = pngUrl;
+                    downloadLink.download = `qrcode-cartao-${selectedCard.id}.png`;
+                    document.body.appendChild(downloadLink);
+                    downloadLink.click();
+                    document.body.removeChild(downloadLink);
+                  }
+                }}
+                className="bg-emerald-600 text-white px-4 py-2 rounded-lg text-sm hover:bg-emerald-700 transition-colors flex items-center gap-2"
+              >
+                Baixar PNG
+              </button>
               <a 
                 href={getPlayerUrl(selectedCard.id)} 
                 target="_blank" 
