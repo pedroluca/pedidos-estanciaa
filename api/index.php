@@ -175,5 +175,26 @@ if (preg_match('#^/estoque/(\d+)$#', $uri, $matches) && $requestMethod === 'DELE
     $controller->deletar($matches[1]);
 }
 
+// Rotas de Cartões de Áudio
+if ($uri === '/audio-cards' && $requestMethod === 'GET') {
+    $controller = new AudioCardController();
+    $controller->getAll();
+}
+
+if ($uri === '/audio-cards' && $requestMethod === 'POST') {
+    $controller = new AudioCardController();
+    $controller->create();
+}
+
+if (preg_match('#^/public/audio-cards/(\d+)$#', $uri, $matches) && $requestMethod === 'GET') {
+    $controller = new AudioCardController();
+    $controller->getById($matches[1]);
+}
+
+if (preg_match('#^/audio-cards/(\d+)$#', $uri, $matches) && $requestMethod === 'DELETE') {
+    $controller = new AudioCardController();
+    $controller->delete($matches[1]);
+}
+
 // Rota não encontrada
 Response::error('Rota não encontrada', 404);

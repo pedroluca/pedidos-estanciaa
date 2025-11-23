@@ -1,12 +1,14 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider } from './contexts/AuthContext';
 import { ProtectedRoute } from './components/ProtectedRoute';
+import { DashboardLayout } from './components/DashboardLayout';
 import { Login } from './pages/Login';
 import { Dashboard } from './pages/Dashboard';
 import { Painel } from './pages/Painel';
 import { NovoPedido } from './pages/NovoPedido';
 import { Contabilizacao } from './pages/Contabilizacao';
 import { Estoque } from './pages/Estoque';
+import { AudioCardsList } from './pages/AudioCards/AudioCardsList';
 
 function App() {
   return (
@@ -19,7 +21,9 @@ function App() {
             path="/dashboard"
             element={
               <ProtectedRoute>
-                <Dashboard />
+                <DashboardLayout>
+                  <Dashboard />
+                </DashboardLayout>
               </ProtectedRoute>
             }
           />
@@ -27,7 +31,9 @@ function App() {
             path="/dashboard/novo-pedido"
             element={
               <ProtectedRoute>
-                <NovoPedido />
+                <DashboardLayout>
+                  <NovoPedido />
+                </DashboardLayout>
               </ProtectedRoute>
             }
           />
@@ -35,7 +41,9 @@ function App() {
             path="/dashboard/contabilizacao"
             element={
               <ProtectedRoute>
-                <Contabilizacao />
+                <DashboardLayout>
+                  <Contabilizacao />
+                </DashboardLayout>
               </ProtectedRoute>
             }
           />
@@ -43,7 +51,19 @@ function App() {
             path="/dashboard/estoque"
             element={
               <ProtectedRoute>
-                <Estoque />
+                <DashboardLayout>
+                  <Estoque />
+                </DashboardLayout>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/dashboard/audio-cards"
+            element={
+              <ProtectedRoute>
+                <DashboardLayout>
+                  <AudioCardsList />
+                </DashboardLayout>
               </ProtectedRoute>
             }
           />

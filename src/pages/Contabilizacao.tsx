@@ -1,6 +1,5 @@
 import { useState, useEffect } from 'react';
-import { ArrowLeft, Calendar, Package } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
+import { Calendar, Package } from 'lucide-react';
 import { api } from '../lib/api';
 
 interface ProdutoContabilizado {
@@ -23,7 +22,7 @@ export function Contabilizacao() {
     new Date().toISOString().split('T')[0]
   );
   const [statusFilter, setStatusFilter] = useState<string[]>(['Finalizado']);
-  const navigate = useNavigate();
+
 
   const loadContabilizacao = async () => {
     try {
@@ -69,32 +68,21 @@ export function Contabilizacao() {
   };
 
   return (
-    <div className="min-h-screen bg-zinc-950">
-      {/* Header */}
-      <header className="bg-zinc-900 border-b border-zinc-800 px-6 py-4">
-        <div className="max-w-7xl mx-auto flex items-center justify-between">
-          <div className="flex items-center gap-4">
-            <button
-              onClick={() => navigate('/dashboard')}
-              className="text-zinc-400 hover:text-white transition"
-            >
-              <ArrowLeft size={24} />
-            </button>
-            <div>
-              <h1 className="text-2xl font-bold text-white flex items-center gap-2">
-                <Package size={28} />
-                Contabilização de Produtos
-              </h1>
-              <p className="text-sm text-zinc-400">
-                Visualize a quantidade total de produtos agendados por dia
-              </p>
-            </div>
-          </div>
+    <div className="space-y-6">
+      <div className="flex justify-between items-center">
+        <div>
+          <h1 className="text-2xl font-bold text-white flex items-center gap-2">
+            <Package size={28} />
+            Contabilização de Produtos
+          </h1>
+          <p className="text-sm text-zinc-400">
+            Visualize a quantidade total de produtos agendados por dia
+          </p>
         </div>
-      </header>
+      </div>
 
       {/* Main Content */}
-      <main className="max-w-7xl mx-auto px-6 py-8">
+      <div className="space-y-6">
         {/* Filtro de Data */}
         <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-6 mb-6">
           <div className="flex items-center gap-4">
@@ -212,7 +200,7 @@ export function Contabilizacao() {
             </div>
           </div>
         )}
-      </main>
+      </div>
     </div>
   );
 }

@@ -1,6 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { ArrowLeft, Plus, Package, AlertTriangle, Minus, Trash2, X } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
+import { Plus, Package, AlertTriangle, Minus, Trash2, X } from 'lucide-react';
 import toast, { Toaster } from 'react-hot-toast';
 import { api } from '../lib/api';
 
@@ -33,7 +32,7 @@ export function Estoque() {
   const [buscaProduto, setBuscaProduto] = useState('');
   const [showDropdown, setShowDropdown] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
-  const navigate = useNavigate();
+
 
   const [novoProduto, setNovoProduto] = useState({
     item_id: null as number | null,
@@ -188,7 +187,7 @@ export function Estoque() {
   };
 
   return (
-    <div className="min-h-screen bg-zinc-950">
+    <div className="space-y-6">
       <Toaster
         position="top-right"
         toastOptions={{
@@ -213,49 +212,38 @@ export function Estoque() {
         }}
       />
       
-      {/* Header */}
-      <header className="bg-zinc-900 border-b border-zinc-800 px-6 py-4">
-        <div className="max-w-7xl mx-auto flex items-center justify-between">
-          <div className="flex items-center gap-4">
-            <button
-              onClick={() => navigate('/dashboard')}
-              className="text-zinc-400 hover:text-white transition"
-            >
-              <ArrowLeft size={24} />
-            </button>
-            <div>
-              <h1 className="text-2xl font-bold text-white flex items-center gap-2">
-                <Package size={28} />
-                Controle de Produtos Perecíveis
-              </h1>
-              <p className="text-sm text-zinc-400">
-                Gerencie produtos com data de validade
-              </p>
-            </div>
-          </div>
-          <button
-            onClick={() => {
-              setShowAddModal(true);
-              setBuscaProduto('');
-              setShowDropdown(false);
-              setNovoProduto({
-                item_id: null,
-                nome_produto: '',
-                data_compra: new Date().toISOString().split('T')[0],
-                data_validade: '',
-                quantidade: 1
-              });
-            }}
-            className="px-4 py-2 bg-emerald-700 hover:bg-emerald-600 text-white rounded-lg transition flex items-center gap-2"
-          >
-            <Plus size={18} />
-            Adicionar Produto
-          </button>
+      <div className="flex justify-between items-center">
+        <div>
+          <h1 className="text-2xl font-bold text-white flex items-center gap-2">
+            <Package size={28} />
+            Controle de Produtos Perecíveis
+          </h1>
+          <p className="text-sm text-zinc-400">
+            Gerencie produtos com data de validade
+          </p>
         </div>
-      </header>
+        <button
+          onClick={() => {
+            setShowAddModal(true);
+            setBuscaProduto('');
+            setShowDropdown(false);
+            setNovoProduto({
+              item_id: null,
+              nome_produto: '',
+              data_compra: new Date().toISOString().split('T')[0],
+              data_validade: '',
+              quantidade: 1
+            });
+          }}
+          className="px-4 py-2 bg-emerald-700 hover:bg-emerald-600 text-white rounded-lg transition flex items-center gap-2"
+        >
+          <Plus size={18} />
+          Adicionar Produto
+        </button>
+      </div>
 
       {/* Main Content */}
-      <main className="max-w-7xl mx-auto px-6 py-8">
+      <div className="space-y-6">
         {/* Filtros */}
         <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-6 mb-6">
           <h3 className="text-sm font-medium text-zinc-400 mb-3">Filtrar por vencimento:</h3>
@@ -417,7 +405,7 @@ export function Estoque() {
             ))}
           </div>
         )}
-      </main>
+      </div>
 
       {/* Modal Adicionar Produto */}
       {showAddModal && (
