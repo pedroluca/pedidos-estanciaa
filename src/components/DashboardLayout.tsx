@@ -20,8 +20,8 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
     { path: '/dashboard/novo-pedido', icon: ShoppingBag, label: 'Novo Pedido' },
     { path: '/dashboard/contabilizacao', icon: DollarSign, label: 'Contabilização' },
     { path: '/dashboard/estoque', icon: Package, label: 'Estoque' },
-    { path: '/dashboard/audio-cards', icon: Music, label: 'Cartões de Áudio' },
-    { path: '/dashboard/telemensagens', icon: Music, label: 'Telemensagens' },
+    { path: '/dashboard/audio-cards', icon: Music, label: 'Cartões de Áudio (teste)' },
+    { path: '/dashboard/telemensagens', icon: Music, label: 'Telemensagens (teste)' },
   ];
 
   return (
