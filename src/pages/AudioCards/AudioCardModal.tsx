@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { X, Upload, Loader2, Music, ListMusic } from 'lucide-react';
+import { X, Upload, Loader2, Music, ListMusic, Search } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 interface AudioCardModalProps {
@@ -20,6 +20,16 @@ export function AudioCardModal({ onClose, onSuccess, initialData }: AudioCardMod
   const [activeTab, setActiveTab] = useState<'upload' | 'catalog'>('upload');
   const [telemensagens, setTelemensagens] = useState<Telemensagem[]>([]);
   const [selectedTelemensagem, setSelectedTelemensagem] = useState<number | null>(null);
+  const [searchTerm, setSearchTerm] = useState('');
+  
+  const normalizeText = (text: string) => {
+    return text.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+  };
+
+  const filteredTelemensagens = telemensagens.filter(msg => 
+    normalizeText(msg.title).includes(normalizeText(searchTerm)) ||
+    normalizeText(msg.category).includes(normalizeText(searchTerm))
+  );
   
   const [formData, setFormData] = useState({
     sender_name: '',
@@ -90,38 +100,6 @@ export function AudioCardModal({ onClose, onSuccess, initialData }: AudioCardMod
       const url = initialData 
         ? `https://estanciaa.app.br/api/audio-cards/${initialData.id}`
         : 'https://estanciaa.app.br/api/audio-cards';
-      
-      // For PUT requests with files, we often need to use POST with _method=PUT or handle it specially.
-      // PHP's $_FILES isn't populated on PUT requests naturally.
-      // A common workaround is using POST for updates with a query param or header, 
-      // OR just using POST for everything if the API supports it.
-      // Let's try standard POST for creation, and for update we might need a workaround if using FormData.
-      // However, our PHP controller checks request method. 
-      // To support file upload on update in PHP, it's easiest to use POST with a custom header or method override.
-      // BUT, let's try to use the PUT method directly and see if our PHP setup handles it (likely not for files).
-      // Strategy: Use POST for update but append `_method=PUT` to body if needed, 
-      // OR change the API to accept POST for updates on a specific route.
-      // Given the current API structure:
-      // PUT /audio-cards/:id -> calls update()
-      // PHP doesn't parse multipart/form-data for PUT.
-      // We need to use POST and spoof the method or read raw input in PHP.
-      // EASIEST FIX: Use POST for update as well, but the router expects PUT.
-      // Let's use POST with `_method` field if we can change the router, OR just use X-HTTP-Method-Override.
-      
-      // Actually, let's use the router's matching.
-      // If we send a POST request to /audio-cards/:id, the router currently expects PUT.
-      // Let's modify the fetch call to use POST but with a special handling?
-      // No, let's stick to the plan. If PHP fails to read files on PUT, we'll need to fix the router.
-      // For now, let's try sending as POST but to the ID URL, and update router to accept POST for updates if needed.
-      // Wait, the router is:
-      // if (preg_match('#^/audio-cards/(\d+)$#', $uri, $matches) && $requestMethod === 'PUT')
-      
-      // I will send as POST and add `_method` = 'PUT' to formData, 
-      // AND I will update the router to accept POST if _method is PUT.
-      // OR simpler: Just update the router to accept POST for updates on that URL.
-      
-      // Let's assume for now we will fix the router to accept POST for updates or use a workaround.
-      // I'll send POST with `_method: PUT` in the body.
       
       if (initialData) {
         data.append('_method', 'PUT');
@@ -262,28 +240,41 @@ export function AudioCardModal({ onClose, onSuccess, initialData }: AudioCardMod
                 </label>
               </div>
             ) : (
-              <div className="space-y-2 max-h-48 overflow-y-auto pr-2 custom-scrollbar">
-                {telemensagens.map(msg => (
-                  <div 
-                    key={msg.id}
-                    onClick={() => setSelectedTelemensagem(msg.id)}
-                    className={`p-3 rounded-lg border cursor-pointer transition-all flex items-center justify-between
-                      ${selectedTelemensagem === msg.id 
-                        ? 'bg-pink-900/20 border-pink-500' 
-                        : 'bg-zinc-800 border-zinc-700 hover:border-zinc-600'}`}
-                  >
-                    <div>
-                      <div className="text-sm font-medium text-white">{msg.title}</div>
-                      <div className="text-xs text-zinc-400">{msg.category}</div>
+              <div className="space-y-3">
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-400" size={16} />
+                  <input
+                    type="text"
+                    placeholder="Buscar por título ou categoria..."
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    className="w-full pl-9 pr-3 py-2 bg-zinc-800 border border-zinc-700 text-white rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-pink-500/20 focus:border-pink-500 placeholder-zinc-500"
+                  />
+                </div>
+                
+                <div className="space-y-2 max-h-48 overflow-y-auto pr-2 custom-scrollbar">
+                  {filteredTelemensagens.map(msg => (
+                    <div 
+                      key={msg.id}
+                      onClick={() => setSelectedTelemensagem(msg.id)}
+                      className={`p-3 rounded-lg border cursor-pointer transition-all flex items-center justify-between
+                        ${selectedTelemensagem === msg.id 
+                          ? 'bg-pink-900/20 border-pink-500' 
+                          : 'bg-zinc-800 border-zinc-700 hover:border-zinc-600'}`}
+                    >
+                      <div>
+                        <div className="text-sm font-medium text-white">{msg.title}</div>
+                        <div className="text-xs text-zinc-400">{msg.category}</div>
+                      </div>
+                      {selectedTelemensagem === msg.id && <Music size={16} className="text-pink-500" />}
                     </div>
-                    {selectedTelemensagem === msg.id && <Music size={16} className="text-pink-500" />}
-                  </div>
-                ))}
-                {telemensagens.length === 0 && (
-                  <div className="text-center text-zinc-500 py-4 text-sm">
-                    Nenhuma mensagem no catálogo
-                  </div>
-                )}
+                  ))}
+                  {filteredTelemensagens.length === 0 && (
+                    <div className="text-center text-zinc-500 py-4 text-sm">
+                      Nenhuma mensagem encontrada
+                    </div>
+                  )}
+                </div>
               </div>
             )}
           </div>
