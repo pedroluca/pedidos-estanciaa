@@ -1,11 +1,12 @@
-import { Plus, Search, Trash2, QrCode, Edit } from 'lucide-react';
+import { Plus, Search, Trash2, QrCode, Download, Pencil } from 'lucide-react';
 import { AudioCardModal } from './AudioCardModal';
-import { QRCodeCanvas } from 'qrcode.react';
+import { QRCodeSVG } from 'qrcode.react';
 import toast from 'react-hot-toast';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 
 interface AudioCard {
   id: number;
+  uuid: string;
   sender_name: string;
   receiver_name: string;
   sender_phone: string;
@@ -22,8 +23,9 @@ export function AudioCardsList() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
-  const [selectedCard, setSelectedCard] = useState<AudioCard | null>(null);
-  const [editingCard, setEditingCard] = useState<AudioCard | undefined>(undefined);
+  const [editingCard, setEditingCard] = useState<AudioCard | null>(null);
+  const [qrCodeCard, setQrCodeCard] = useState<AudioCard | null>(null);
+  const qrCodeRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     fetchCards();
@@ -69,7 +71,7 @@ export function AudioCardsList() {
 
   const handleCloseModal = () => {
     setIsModalOpen(false);
-    setEditingCard(undefined);
+    setEditingCard(null);
   };
 
   const filteredCards = cards.filter(card => 
@@ -78,7 +80,35 @@ export function AudioCardsList() {
     card.order_code?.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
-  const getPlayerUrl = (id: number) => `https://player.estanciaa.app.br/${id}`;
+  const getPlayerUrl = (uuid: string) => `https://player.estanciaa.app.br/${uuid}`;
+
+  const downloadQRCode = () => {
+    if (!qrCodeRef.current || !qrCodeCard) return;
+
+    const svg = qrCodeRef.current.querySelector('svg');
+    if (svg) {
+      const svgData = new XMLSerializer().serializeToString(svg);
+      const canvas = document.createElement('canvas');
+      const ctx = canvas.getContext('2d');
+      const img = new Image();
+      
+      img.onload = () => {
+        canvas.width = img.width;
+        canvas.height = img.height;
+        ctx?.drawImage(img, 0, 0);
+        const pngFile = canvas.toDataURL('image/png');
+        
+        const downloadLink = document.createElement('a');
+        downloadLink.download = `qrcode-${qrCodeCard.sender_name}-${qrCodeCard.receiver_name}.png`;
+        downloadLink.href = pngFile;
+        document.body.appendChild(downloadLink);
+        downloadLink.click();
+        document.body.removeChild(downloadLink);
+      };
+      
+      img.src = 'data:image/svg+xml;base64,' + btoa(svgData);
+    }
+  };
 
   return (
     <div className="space-y-6">
@@ -86,7 +116,7 @@ export function AudioCardsList() {
         <h1 className="text-2xl font-bold text-white">Cartões de Áudio</h1>
         <button
           onClick={() => {
-            setEditingCard(undefined);
+            setEditingCard(null);
             setIsModalOpen(true);
           }}
           className="bg-pink-600 hover:bg-pink-700 text-white px-4 py-2 rounded-lg flex items-center gap-2 transition-colors"
@@ -170,7 +200,7 @@ export function AudioCardsList() {
                     </td>
                     <td className="p-4">
                       <button 
-                        onClick={() => setSelectedCard(card)}
+                        onClick={() => setQrCodeCard(card)}
                         className="text-zinc-400 hover:text-pink-500 transition-colors"
                         title="Ver QR Code"
                       >
@@ -183,7 +213,7 @@ export function AudioCardsList() {
                         className="text-blue-400 hover:text-blue-300 p-2 hover:bg-blue-900/20 rounded-lg transition-colors"
                         title="Editar"
                       >
-                        <Edit size={18} />
+                        <Pencil size={18} />
                       </button>
                       <button
                         onClick={() => handleDelete(card.id)}
@@ -212,52 +242,29 @@ export function AudioCardsList() {
         />
       )}
 
-      {selectedCard && (
-        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50 p-4" onClick={() => setSelectedCard(null)}>
-          <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-6 max-w-sm w-full text-center" onClick={e => e.stopPropagation()}>
-            <h3 className="text-lg font-bold text-white mb-4">QR Code do Cartão #{selectedCard.id}</h3>
-            <div className="bg-white p-4 rounded-lg inline-block mb-4">
-              <QRCodeCanvas 
-                value={getPlayerUrl(selectedCard.id)}
-                size={200}
-                level="H"
-                includeMargin={true}
-              />
+      {qrCodeCard && (
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-6 max-w-sm w-full text-center shadow-xl">
+            <h3 className="text-lg font-bold text-white mb-4">QR Code do Cartão</h3>
+            <div className="bg-white p-4 rounded-lg inline-block mb-4" ref={qrCodeRef}>
+              <QRCodeSVG value={getPlayerUrl(qrCodeCard.uuid)} size={200} />
             </div>
-            <p className="text-sm text-zinc-500 mb-4 break-all">
-              {getPlayerUrl(selectedCard.id)}
+            <p className="text-sm text-zinc-400 mb-6 break-all">
+              {getPlayerUrl(qrCodeCard.uuid)}
             </p>
-            <div className="flex gap-2 justify-center">
+            <div className="flex gap-3">
               <button
-                onClick={() => {
-                  const canvas = document.querySelector('canvas');
-                  if (canvas) {
-                    const pngUrl = canvas.toDataURL('image/png');
-                    const downloadLink = document.createElement('a');
-                    downloadLink.href = pngUrl;
-                    downloadLink.download = `qrcode-cartao-${selectedCard.id}.png`;
-                    document.body.appendChild(downloadLink);
-                    downloadLink.click();
-                    document.body.removeChild(downloadLink);
-                  }
-                }}
-                className="bg-emerald-600 text-white px-4 py-2 rounded-lg text-sm hover:bg-emerald-700 transition-colors flex items-center gap-2"
-              >
-                Baixar PNG
-              </button>
-              <a 
-                href={getPlayerUrl(selectedCard.id)} 
-                target="_blank" 
-                rel="noreferrer"
-                className="bg-pink-600 text-white px-4 py-2 rounded-lg text-sm hover:bg-pink-700 transition-colors"
-              >
-                Abrir Link
-              </a>
-              <button 
-                onClick={() => setSelectedCard(null)}
-                className="bg-zinc-800 text-zinc-300 px-4 py-2 rounded-lg text-sm hover:bg-zinc-700 transition-colors"
+                onClick={() => setQrCodeCard(null)}
+                className="flex-1 px-4 py-2 border border-zinc-700 text-zinc-300 rounded-lg hover:bg-zinc-800 transition-colors"
               >
                 Fechar
+              </button>
+              <button
+                onClick={downloadQRCode}
+                className="flex-1 px-4 py-2 bg-pink-600 text-white rounded-lg hover:bg-pink-700 transition-colors flex items-center justify-center gap-2"
+              >
+                <Download size={18} />
+                Baixar
               </button>
             </div>
           </div>

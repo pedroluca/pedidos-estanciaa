@@ -186,9 +186,9 @@ if ($uri === '/audio-cards' && $requestMethod === 'POST') {
     $controller->create();
 }
 
-if (preg_match('#^/public/audio-cards/(\d+)$#', $uri, $matches) && $requestMethod === 'GET') {
+if (preg_match('#^/public/audio-cards/([a-zA-Z0-9-]+)$#', $uri, $matches) && $requestMethod === 'GET') {
     $controller = new AudioCardController();
-    $controller->getById($matches[1]);
+    $controller->getByUuid($matches[1]);
 }
 
 if (preg_match('#^/audio-cards/(\d+)$#', $uri, $matches) && ($requestMethod === 'PUT' || $requestMethod === 'POST')) {

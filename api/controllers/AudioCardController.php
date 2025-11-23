@@ -17,6 +17,33 @@ class AudioCardController {
         }
     }
 
+    private function generateUuid() {
+        return sprintf( '%04x%04x-%04x-%04x-%04x-%04x%04x%04x',
+            mt_rand( 0, 0xffff ), mt_rand( 0, 0xffff ),
+            mt_rand( 0, 0xffff ),
+            mt_rand( 0, 0x0fff ) | 0x4000,
+            mt_rand( 0, 0x3fff ) | 0x8000,
+            mt_rand( 0, 0xffff ), mt_rand( 0, 0xffff ), mt_rand( 0, 0xffff )
+        );
+    }
+
+    public function getByUuid($uuid) {
+        try {
+            $stmt = $this->db->prepare("SELECT * FROM audio_cards WHERE uuid = ?");
+            $stmt->execute([$uuid]);
+            $card = $stmt->fetch(PDO::FETCH_ASSOC);
+
+            if (!$card) {
+                Response::error('Cartão não encontrado', 404);
+                return;
+            }
+
+            Response::json($card);
+        } catch (Exception $e) {
+            Response::error('Erro ao buscar cartão: ' . $e->getMessage());
+        }
+    }
+
     public function getById($id) {
         try {
             $stmt = $this->db->prepare("SELECT * FROM audio_cards WHERE id = ?");
@@ -104,12 +131,16 @@ class AudioCardController {
                 }
             }
 
+            // Generate UUID
+            $uuid = $this->generateUuid();
+
             // Save to DB
-            $sql = "INSERT INTO audio_cards (sender_name, receiver_name, sender_phone, receiver_phone, audio_path, image_path, order_code, status) 
-                    VALUES (?, ?, ?, ?, ?, ?, ?, 'active')";
+            $sql = "INSERT INTO audio_cards (uuid, sender_name, receiver_name, sender_phone, receiver_phone, audio_path, image_path, order_code, status) 
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'active')";
             
             $stmt = $this->db->prepare($sql);
             $stmt->execute([
+                $uuid,
                 $_POST['sender_name'],
                 $_POST['receiver_name'],
                 $_POST['sender_phone'] ?? null,
@@ -123,6 +154,7 @@ class AudioCardController {
             
             Response::json([
                 'id' => $id,
+                'uuid' => $uuid,
                 'message' => 'Cartão de áudio criado com sucesso',
                 'audio_url' => $audioPath,
                 'image_url' => $imagePath
