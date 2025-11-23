@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Plus, Search, Trash2, Upload, Music, Loader2 } from 'lucide-react';
+import { Plus, Search, Trash2, Upload, Loader2 } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 interface Telemensagem {
