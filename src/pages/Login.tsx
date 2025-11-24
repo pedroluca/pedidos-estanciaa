@@ -29,16 +29,16 @@ export function Login() {
   };
 
   return (
-    <main className="flex flex-col md:flex-row items-center justify-center min-h-screen bg-zinc-950">
-      <section className="w-full h-1/3 md:w-1/2 md:h-screen flex items-center justify-center bg-[#0D5745] rounded-b-4xl md:rounded-r-2xl md:rounded-bl-none">
+    <main className="flex flex-col lg:flex-row items-center lg:justify-center h-screen bg-zinc-950">
+      <section className="w-full h-1/4 lg:w-1/2 lg:h-screen flex items-center justify-center bg-[#0D5745] rounded-b-4xl lg:rounded-r-2xl lg:rounded-bl-none">
         <div className="text-white text-center">
           <h1 className="text-4xl font-bold mb-2">Floricultura</h1>
           <h2 className="text-2xl">Estância-A</h2>
         </div>
       </section>
       
-      <section className="w-full h-2/3 md:w-1/2 md:h-screen flex items-center justify-center">
-        <div className="w-4/5 md:w-full max-w-md p-8 rounded-2xl shadow-lg border border-zinc-800 bg-zinc-900">
+      <section className="w-full h-3/4 lg:w-1/2 lg:h-screen flex mt-[15%] lg:mt-0 items-start lg:items-center justify-center">
+        <div className="w-4/5 lg:w-full max-w-md p-8 rounded-2xl shadow-lg border border-zinc-800 bg-zinc-900">
           <h1 className="text-2xl font-semibold mb-6 text-center text-white">Entrar</h1>
 
           <form onSubmit={handleSubmit} className="flex flex-col gap-4">

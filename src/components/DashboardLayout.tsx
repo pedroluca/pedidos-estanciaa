@@ -25,7 +25,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
   ];
 
   return (
-    <div className="min-h-screen bg-zinc-950 flex text-zinc-100">
+    <div className="h-screen overflow-hidden bg-zinc-950 flex text-zinc-100">
       {/* Mobile Sidebar Overlay */}
       {isSidebarOpen && (
         <div 
@@ -51,7 +51,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
             </button>
           </div>
 
-          <nav className="flex-1 p-4 space-y-1">
+          <nav className="flex-1 overflow-y-auto p-4 space-y-1">
             {menuItems.map((item) => (
               <Link
                 key={item.path}
