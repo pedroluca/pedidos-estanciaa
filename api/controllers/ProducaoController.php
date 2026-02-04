@@ -83,7 +83,7 @@ class ProducaoController {
                     p.valor_total
                 FROM pedidos p
                 WHERE p.data_agendamento = ?
-                AND p.status IN ('Agendado', 'Em Produção')
+                AND p.status IN ('Agendado', 'Em Produção', 'Saiu para Entrega')
                 ORDER BY p.horario_agendamento ASC
             ";
 
@@ -91,10 +91,11 @@ class ProducaoController {
             $stmt->execute([$data]);
             $pedidos = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-            // Para cada pedido, busca os itens
+            // Para cada pedido, busca os itens em estrutura hierárquica
             foreach ($pedidos as &$pedido) {
                 $stmtItens = $this->db->prepare("
                     SELECT 
+                        pi.*,
                         pi.quantidade,
                         pi.observacoes,
                         i.nome,
@@ -104,7 +105,10 @@ class ProducaoController {
                     WHERE pi.pedido_id = ?
                 ");
                 $stmtItens->execute([$pedido['id']]);
-                $pedido['itens'] = $stmtItens->fetchAll(PDO::FETCH_ASSOC);
+                $todosItens = $stmtItens->fetchAll(PDO::FETCH_ASSOC);
+                
+                // Organiza em estrutura hierárquica
+                $pedido['itens'] = $this->buildItemHierarchy($todosItens);
                 
                 // Converte is_feito para boolean
                 $pedido['is_feito'] = (bool)$pedido['is_feito'];
@@ -183,5 +187,21 @@ class ProducaoController {
         } catch (PDOException $e) {
             Response::error('Erro ao buscar contabilização: ' . $e->getMessage(), 500);
         }
+    }
+
+    private function buildItemHierarchy($items, $parentId = null) {
+        $result = [];
+        foreach ($items as $item) {
+            $currentParentId = $item['parent_pedido_item_id'] ?? null;
+            
+            // Compara como string para evitar problemas de tipo (null == null, "1" == 1)
+            if (($currentParentId === null && $parentId === null) || 
+                ($currentParentId !== null && $parentId !== null && $currentParentId == $parentId)) {
+                // Busca sub-itens deste item recursivamente
+                $item['items'] = $this->buildItemHierarchy($items, $item['id']);
+                $result[] = $item;
+            }
+        }
+        return $result;
     }
 }

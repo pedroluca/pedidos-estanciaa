@@ -65,6 +65,7 @@ class PedidosController {
     }
 
     private function getItensPedido($pedidoId) {
+        // Busca todos os itens do pedido
         $stmt = $this->db->prepare('
             SELECT pi.*, i.nome, i.imagem
             FROM pedidos_itens pi
@@ -72,7 +73,26 @@ class PedidosController {
             WHERE pi.pedido_id = ?
         ');
         $stmt->execute([$pedidoId]);
-        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+        $todosItens = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        
+        // Organiza em estrutura hierárquica
+        return $this->buildItemHierarchy($todosItens);
+    }
+
+    private function buildItemHierarchy($items, $parentId = null) {
+        $result = [];
+        foreach ($items as $item) {
+            $currentParentId = $item['parent_pedido_item_id'] ?? null;
+            
+            // Compara como string para evitar problemas de tipo (null == null, "1" == 1)
+            if (($currentParentId === null && $parentId === null) || 
+                ($currentParentId !== null && $parentId !== null && $currentParentId == $parentId)) {
+                // Busca sub-itens deste item recursivamente
+                $item['items'] = $this->buildItemHierarchy($items, $item['id']);
+                $result[] = $item;
+            }
+        }
+        return $result;
     }
 
     public function create() {

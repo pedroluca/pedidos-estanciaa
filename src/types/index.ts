@@ -32,6 +32,15 @@ export interface Item {
   ativo: boolean;
 }
 
+export interface ItemOption {
+  option_id: number;
+  name: string;
+  quantity: number;
+  unit_price: number;
+  option_group_id?: number;
+  option_group_name?: string;
+}
+
 export interface ItemPedido {
   item_id: number;
   quantidade: number;
@@ -40,6 +49,8 @@ export interface ItemPedido {
   observacoes?: string;
   nome?: string;
   imagem?: string;
+  items?: ItemPedido[]; // Array de sub-itens (agora populado a partir de options da API)
+  options?: ItemOption[]; // Array de opções da API (adicionais)
 }
 
 export interface Pedido {

@@ -79,6 +79,52 @@ export function Painel() {
     "Esperando Retirada": "bg-lime-600",
   }
 
+  // Função recursiva para renderizar itens e sub-itens
+  const renderItem = (item: any, idx: number, level: number = 0) => {
+    const isSubItem = level > 0
+    
+    return (
+      <div key={`item-${idx}-${level}`} className={isSubItem ? 'col-span-2' : ''}>
+        <div className={`flex items-center gap-4 bg-[#2a2a2a] rounded-xl p-4 border ${
+          isSubItem ? 'border-amber-600/40 ml-12' : 'border-gray-700'
+        }`}>
+          {isSubItem && <div className="text-amber-500 text-lg mr-2">↳</div>}
+          <img
+            src={item.imagem || 'https://placehold.co/200x200?text=Sem+Imagem'}
+            alt={item.nome}
+            onClick={(e) => {
+              e.stopPropagation()
+              setZoomedImage(item.imagem || 'https://placehold.co/200x200?text=Sem+Imagem')
+            }}
+            className="w-48 h-48 object-cover rounded-xl shrink-0 cursor-pointer hover:opacity-80 transition-opacity"
+          />
+          <div className="flex-1">
+            <h3 className="text-white font-medium mb-1 text-lg">
+              {isSubItem && <span className="text-amber-400 text-sm mr-2">(Adicional)</span>}
+              {item.nome}
+            </h3>
+            <p className="text-gray-400">Quantidade: {item.quantidade}</p>
+            {item.observacoes && (
+              <div className="mt-4 p-3 bg-amber-900/30 border border-amber-700/50 rounded-lg">
+                <p className="text-amber-200 font-semibold text-sm mb-1">⚠️ Observações do Item:</p>
+                <p className="text-amber-100 text-sm">{item.observacoes}</p>
+              </div>
+            )}
+          </div>
+        </div>
+        
+        {/* Renderiza sub-itens recursivamente */}
+        {item.items && item.items.length > 0 && (
+          <div className="mt-2 grid grid-cols-2 gap-4">
+            {item.items.map((subItem: any, subIdx: number) => 
+              renderItem(subItem, subIdx, level + 1)
+            )}
+          </div>
+        )}
+      </div>
+    )
+  }
+
   if (loading && pedidos.length === 0) {
     return (
       <div className="min-h-screen bg-[#111] flex items-center justify-center">
@@ -322,33 +368,10 @@ export function Painel() {
               </button>
             </div>
 
+            {/* Renderização Recursiva de Itens */}
             <div className="grid grid-cols-2 gap-4">
               {selectedPedido.itens && selectedPedido.itens.length > 0 ? (
-                selectedPedido.itens.map((item, idx) => (
-                  <div key={idx} className="flex items-center gap-4 bg-[#2a2a2a] rounded-xl p-4 border border-gray-700">
-                    <img
-                      src={item.imagem || 'https://placehold.co/200x200?text=Sem+Imagem'}
-                      alt={item.nome}
-                      onClick={(e) => {
-                        e.stopPropagation()
-                        setZoomedImage(item.imagem || 'https://placehold.co/200x200?text=Sem+Imagem')
-                      }}
-                      className="w-48 h-48 object-cover rounded-xl shrink-0 cursor-pointer hover:opacity-80 transition-opacity"
-                    />
-                    <div className="flex-1">
-                      <h3 className="text-white font-medium mb-1 text-lg">{item.nome}</h3>
-                      <p className="text-gray-400">Quantidade: {item.quantidade}</p>
-                      {item.observacoes && (
-                        // <p className="text-gray-500 text-sm mt-2">{item.observacoes}</p>
-                        
-                        <div className="mt-4 p-3 bg-amber-900/30 border border-amber-700/50 rounded-lg">
-                          <p className="text-amber-200 font-semibold text-sm mb-1">⚠️ Observações do Item:</p>
-                          <p className="text-amber-100 text-sm">{item.observacoes}</p>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                ))
+                selectedPedido.itens.map((item, idx) => renderItem(item, idx, 0))
               ) : (
                 <div className="col-span-2 text-center text-gray-500 py-8">
                   Nenhum item cadastrado neste pedido

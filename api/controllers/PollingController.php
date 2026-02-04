@@ -306,8 +306,11 @@ class PollingController {
         $pedidoId = $this->db->lastInsertId();
 
         // Insere itens do pedido
-        if (isset($order['items']) && is_array($order['items'])) {
-            foreach ($order['items'] as $item) {
+        // A API pode retornar 'items' ou 'order_items' dependendo da versão
+        $items = $order['items'] ?? $order['order_items'] ?? [];
+        
+        if (is_array($items)) {
+            foreach ($items as $item) {
                 $this->insertOrderItem($pedidoId, $item);
             }
         }
@@ -480,8 +483,11 @@ class PollingController {
         $stmt = $this->db->prepare('DELETE FROM pedidos_itens WHERE pedido_id = ?');
         $stmt->execute([$pedidoId]);
 
-        if (isset($order['items']) && is_array($order['items'])) {
-            foreach ($order['items'] as $item) {
+        // A API pode retornar 'items' ou 'order_items' dependendo da versão
+        $items = $order['items'] ?? $order['order_items'] ?? [];
+        
+        if (is_array($items)) {
+            foreach ($items as $item) {
                 // Ignora itens cancelados
                 if ($this->isItemCancelled($item)) {
                     continue;
@@ -506,9 +512,10 @@ class PollingController {
         return false;
     }
 
-    private function insertOrderItem($pedidoId, $item) {
+    private function insertOrderItem($pedidoId, $item, $parentPedidoItemId = null) {
         // Tenta encontrar o item pelo ID da API ou pelo nome
-        $apiItemId = $item['item_id'] ?? null;
+        // A API pode usar 'item_id', 'subitem_id', ou outros campos
+        $apiItemId = $item['item_id'] ?? $item['subitem_id'] ?? null;
         $itemId = null;
         
         if ($apiItemId) {
@@ -522,19 +529,35 @@ class PollingController {
         if (!$itemId) {
             // Busca pelo nome do item
             $nome = $item['name'] ?? '';
-            $stmt = $this->db->prepare('SELECT id FROM itens WHERE nome LIKE ? LIMIT 1');
-            $stmt->execute(['%' . $nome . '%']);
-            $result = $stmt->fetch(PDO::FETCH_ASSOC);
-            $itemId = $result ? $result['id'] : null;
+            if ($nome) {
+                $stmt = $this->db->prepare('SELECT id FROM itens WHERE nome LIKE ? LIMIT 1');
+                $stmt->execute(['%' . $nome . '%']);
+                $result = $stmt->fetch(PDO::FETCH_ASSOC);
+                $itemId = $result ? $result['id'] : null;
+            }
         }
 
-        if (!$itemId) return; // Skip se não encontrar o item
+        // Se não encontrar o item, cria um temporário no banco
+        if (!$itemId) {
+            $nome = $item['name'] ?? 'Item sem nome';
+            $stmt = $this->db->prepare('
+                INSERT INTO itens (nome, descricao, preco, categoria_id, ativo)
+                VALUES (?, ?, ?, 1, 1)
+            ');
+            $stmt->execute([
+                $nome,
+                'Item criado automaticamente pelo polling',
+                $item['unit_price'] ?? $item['price'] ?? 0,
+            ]);
+            $itemId = $this->db->lastInsertId();
+        }
 
         $stmt = $this->db->prepare('
             INSERT INTO pedidos_itens (
                 pedido_id, item_id, quantidade, 
-                preco_unitario, preco_total, observacoes
-            ) VALUES (?, ?, ?, ?, ?, ?)
+                preco_unitario, preco_total, observacoes,
+                parent_pedido_item_id
+            ) VALUES (?, ?, ?, ?, ?, ?, ?)
         ');
 
         $quantidade = $item['quantity'] ?? 1;
@@ -548,8 +571,45 @@ class PollingController {
             $quantidade,
             $precoUnitario,
             $precoTotal,
-            $obs
+            $obs,
+            $parentPedidoItemId
         ]);
+
+        $novoPedidoItemId = $this->db->lastInsertId();
+
+        // Processa order_subitems (adicionais) da API Cardápio Web
+        // Exemplo: Caixa kraft com bombons, etc.
+        if (isset($item['order_subitems']) && is_array($item['order_subitems'])) {
+            foreach ($item['order_subitems'] as $subitem) {
+                // Transforma o subitem em formato de item para inserção
+                $subitemAsItem = [
+                    'item_id' => $subitem['subitem_id'] ?? null,
+                    'name' => $subitem['name'] ?? '',
+                    'quantity' => $subitem['quantity'] ?? 1,
+                    'unit_price' => $subitem['price'] ?? 0,
+                    'total_price' => $subitem['total_price'] ?? 0,
+                    'observation' => ''
+                ];
+                
+                $this->insertOrderItem($pedidoId, $subitemAsItem, $novoPedidoItemId);
+            }
+        }
+        
+        // Suporta também options (para iFOOD ou outras APIs)
+        if (isset($item['options']) && is_array($item['options'])) {
+            foreach ($item['options'] as $option) {
+                $optionAsItem = [
+                    'item_id' => $option['option_id'] ?? null,
+                    'name' => $option['name'] ?? '',
+                    'quantity' => $option['quantity'] ?? 1,
+                    'unit_price' => $option['unit_price'] ?? 0,
+                    'total_price' => ($option['quantity'] ?? 1) * ($option['unit_price'] ?? 0),
+                    'observation' => ''
+                ];
+                
+                $this->insertOrderItem($pedidoId, $optionAsItem, $novoPedidoItemId);
+            }
+        }
     }
 
     private function hasItemChanges($pedidoId, $newItems) {
